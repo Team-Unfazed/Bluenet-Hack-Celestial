@@ -92,6 +92,8 @@ class FishingZoneResponse(BaseModel):
     user_location: Dict[str, Any]
     best_zones: List[Dict[str, Any]]
     prediction_details: Dict[str, Any]
+    total_zones: Optional[int] = None
+    mapbox_response: Optional[Dict[str, Any]] = None
 
 class MandiRecommendationRequest(BaseModel):
     port_name: str
