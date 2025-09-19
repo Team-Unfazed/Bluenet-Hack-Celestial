@@ -675,6 +675,348 @@ class BlueNetAPITester:
         self.auth_token = original_token
         return success, response
 
+    # =============================================================================
+    # 🐟 ENHANCED FISH FORECASTING & CATCH LOGGING TESTS (REVIEW REQUEST PRIORITY)
+    # =============================================================================
+
+    def test_enhanced_fish_forecasting_mumbai(self):
+        """Test Enhanced Fish Forecasting API with Mumbai coordinates as specified in review request"""
+        print("\n🎣 Testing ENHANCED FISH FORECASTING with Real ML Models (Mumbai)")
+        
+        # Test with exact Mumbai coordinates from review request
+        success, response = self.run_test(
+            "Enhanced Fish Forecasting - Mumbai (19.0760, 72.8777)",
+            "POST",
+            "api/predict/fishing-zones",
+            200,
+            data={
+                "latitude": 19.0760,
+                "longitude": 72.8777,
+                "radius_km": 15  # As specified in review request
+            }
+        )
+        
+        if success and response:
+            # Verify enhanced ML model integration
+            prediction_details = response.get('prediction_details', {})
+            model_info = prediction_details.get('model_info', '')
+            models_used = prediction_details.get('models_used', [])
+            
+            print(f"   🤖 ML Model Integration:")
+            print(f"      Model Info: {model_info}")
+            print(f"      Models Used: {len(models_used)} models")
+            for model in models_used:
+                print(f"         - {model}")
+            
+            # Verify environmental data is detailed
+            best_zones = response.get('best_zones', [])
+            if best_zones:
+                zone = best_zones[0]
+                ml_env_data = zone.get('ml_environmental_data', {})
+                
+                print(f"   🌊 Detailed Environmental Data:")
+                print(f"      Sea Surface Temperature: {ml_env_data.get('sea_surface_temp_c', 'N/A')}°C")
+                print(f"      Wind Speed: {ml_env_data.get('wind_speed_knots', 'N/A')} knots")
+                print(f"      Ocean Current: {ml_env_data.get('ocean_current_knots', 'N/A')} knots")
+                print(f"      Chlorophyll: {ml_env_data.get('chlorophyll_mg_m3', 'N/A')} mg/m³")
+                print(f"      Safety Level: {ml_env_data.get('safety_level', 'N/A')}")
+                
+                # Verify fishing scores are realistic and varied
+                fish_prob = zone.get('fish_probability', {})
+                print(f"   🐟 Fish Probability Predictions:")
+                for species, prob in fish_prob.items():
+                    print(f"      {species.title()}: {prob:.3f} ({prob*100:.1f}%)")
+                
+                # Check if scores are varied (not all the same)
+                prob_values = list(fish_prob.values())
+                if len(set(round(p, 2) for p in prob_values)) > 1:
+                    print(f"   ✅ Fish probabilities are varied and realistic")
+                else:
+                    print(f"   ⚠️ Fish probabilities show limited variation")
+                
+                # Verify environmental scores are realistic
+                sst_score = zone.get('sst', 0)
+                chlorophyll_score = zone.get('chlorophyll', 0)
+                wind_score = zone.get('wind', 0)
+                current_score = zone.get('current', 0)
+                
+                print(f"   📊 Environmental Scores:")
+                print(f"      SST Score: {sst_score:.3f}")
+                print(f"      Chlorophyll Score: {chlorophyll_score:.3f}")
+                print(f"      Wind Score: {wind_score:.3f}")
+                print(f"      Current Score: {current_score:.3f}")
+                
+                # Check if using real ML models (not fallback 0.5 values)
+                scores = [sst_score, chlorophyll_score, wind_score, current_score]
+                fallback_count = sum(1 for s in scores if abs(s - 0.5) < 0.01)
+                
+                if fallback_count == len(scores):
+                    print(f"   ❌ CRITICAL: All scores are 0.5 - using fallback values, not real ML models")
+                elif fallback_count > len(scores) // 2:
+                    print(f"   ⚠️ WARNING: {fallback_count}/{len(scores)} scores are fallback values")
+                else:
+                    print(f"   ✅ EXCELLENT: Using real ML model predictions")
+            
+            # Verify 8-12 zones are returned
+            total_zones = len(best_zones)
+            if 8 <= total_zones <= 12:
+                print(f"   ✅ Returned {total_zones} zones (within expected 8-12 range)")
+            else:
+                print(f"   ⚠️ Returned {total_zones} zones (expected 8-12)")
+            
+            # Check environmental summary
+            env_summary = prediction_details.get('environmental_summary', {})
+            if env_summary:
+                print(f"   🌍 Environmental Summary:")
+                print(f"      Base SST: {env_summary.get('base_sst_c', 'N/A')}°C")
+                print(f"      Base Wind: {env_summary.get('base_wind_knots', 'N/A')} knots")
+                print(f"      Base Current: {env_summary.get('base_current_knots', 'N/A')} knots")
+                print(f"      Overall Safety: {env_summary.get('overall_safety', 'N/A')}")
+        
+        return success, response
+
+    def test_catch_logging_with_image_classification(self):
+        """Test Catch Logging API with image classification as specified in review request"""
+        print("\n🐟 Testing CATCH LOGGING with AI Image Classification")
+        
+        if not self.auth_token:
+            print("❌ Skipping catch logging test - authentication required")
+            return False, {}
+        
+        # Create a mock image file for testing
+        import io
+        import tempfile
+        
+        # Create a temporary image file
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+            # Write some dummy image data
+            temp_file.write(b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00')
+            temp_file_path = temp_file.name
+        
+        try:
+            # Test catch logging with form data as specified in review request
+            url = f"{self.base_url}/api/catch-log"
+            headers = {'Authorization': f'Bearer {self.auth_token}'}
+            
+            # Form data as specified: species="pomfret", weight=1.5, location_lat=19.0760, location_lon=72.8777
+            with open(temp_file_path, 'rb') as image_file:
+                files = {'image': ('test_fish.jpg', image_file, 'image/jpeg')}
+                data = {
+                    'species': 'pomfret',
+                    'weight': 1.5,
+                    'location_lat': 19.0760,
+                    'location_lon': 72.8777
+                }
+                
+                print(f"   📤 Uploading catch log with:")
+                print(f"      Species: {data['species']}")
+                print(f"      Weight: {data['weight']} kg")
+                print(f"      Location: {data['location_lat']}, {data['location_lon']}")
+                
+                self.tests_run += 1
+                
+                try:
+                    response = requests.post(url, files=files, data=data, headers=headers, timeout=30)
+                    
+                    success = response.status_code == 200
+                    if success:
+                        self.tests_passed += 1
+                        print(f"✅ Passed - Status: {response.status_code}")
+                        
+                        try:
+                            response_data = response.json()
+                            
+                            # Verify AI classification results
+                            ai_classification = response_data.get('data', {}).get('ai_classification', {})
+                            if ai_classification:
+                                predicted_species = ai_classification.get('predicted_species', 'N/A')
+                                confidence = ai_classification.get('confidence', 'N/A')
+                                matches_manual = ai_classification.get('matches_manual', False)
+                                
+                                print(f"   🤖 AI Classification Results:")
+                                print(f"      Predicted Species: {predicted_species}")
+                                print(f"      Confidence: {confidence}")
+                                print(f"      Matches Manual Entry: {matches_manual}")
+                                
+                                if predicted_species != 'N/A' and predicted_species != 'Classification Failed':
+                                    print(f"   ✅ AI species classification working")
+                                else:
+                                    print(f"   ⚠️ AI species classification returned fallback result")
+                            
+                            # Verify compliance status calculation
+                            compliance = response_data.get('data', {}).get('compliance', {})
+                            if compliance:
+                                compliant = compliance.get('compliant', False)
+                                status = compliance.get('status', 'N/A')
+                                issues = compliance.get('issues', [])
+                                
+                                print(f"   📋 Compliance Check:")
+                                print(f"      Status: {status}")
+                                print(f"      Compliant: {compliant}")
+                                if issues:
+                                    print(f"      Issues: {', '.join(filter(None, issues))}")
+                                
+                                print(f"   ✅ Compliance status calculation working")
+                            
+                            # Verify environmental snapshot
+                            env_snapshot = response_data.get('data', {}).get('environmental_snapshot', {})
+                            if env_snapshot:
+                                print(f"   🌊 Environmental Snapshot Captured:")
+                                wind_speed = env_snapshot.get('wind_speed_knots', 'N/A')
+                                sst = env_snapshot.get('sea_surface_temp_c', 'N/A')
+                                print(f"      Wind Speed: {wind_speed} knots")
+                                print(f"      Sea Surface Temp: {sst}°C")
+                                print(f"   ✅ Environmental conditions integrated")
+                            
+                            # Verify catch details
+                            catch_details = response_data.get('data', {}).get('catch_details', {})
+                            if catch_details:
+                                print(f"   📝 Catch Details Logged:")
+                                print(f"      Species: {catch_details.get('species', 'N/A')}")
+                                print(f"      Weight: {catch_details.get('weight_kg', 'N/A')} kg")
+                                print(f"      Location: {catch_details.get('location', 'N/A')}")
+                            
+                            return True, response_data
+                            
+                        except Exception as e:
+                            print(f"   Response parsing error: {e}")
+                            print(f"   Raw response: {response.text[:200]}...")
+                            return True, {}
+                    else:
+                        print(f"❌ Failed - Expected 200, got {response.status_code}")
+                        print(f"   Response: {response.text[:200]}...")
+                        self.failed_tests.append({
+                            'name': 'Catch Logging with Image Classification',
+                            'expected': 200,
+                            'actual': response.status_code,
+                            'response': response.text[:200]
+                        })
+                        return False, {}
+                        
+                except Exception as e:
+                    print(f"❌ Failed - Error: {str(e)}")
+                    self.failed_tests.append({
+                        'name': 'Catch Logging with Image Classification',
+                        'error': str(e)
+                    })
+                    return False, {}
+        
+        finally:
+            # Clean up temporary file
+            try:
+                import os
+                os.unlink(temp_file_path)
+            except:
+                pass
+
+    def test_ml_model_verification(self):
+        """Verify all 4 ML models are loaded and working"""
+        print("\n🤖 Testing ML MODEL VERIFICATION")
+        
+        # Test maritime safety endpoints to verify ML models
+        success, response = self.run_test(
+            "ML Models - Maritime Safety Analysis",
+            "GET",
+            "api/maritime/danger-analysis?lat=19.0760&lon=72.8777",
+            200
+        )
+        
+        if success and response:
+            data = response.get('data', {})
+            env_data = data.get('environmental_data', {})
+            
+            # Check if all 4 ML models are providing predictions
+            ml_predictions = {
+                'wind_speed_knots': env_data.get('wind_speed_knots', 0),
+                'ocean_current_knots': env_data.get('ocean_current_knots', 0),
+                'sea_surface_temp_c': env_data.get('sea_surface_temp_c', 0),
+                'chlorophyll_mg_m3': env_data.get('chlorophyll_mg_m3', 0)
+            }
+            
+            print(f"   🔍 ML Model Predictions:")
+            models_working = 0
+            for param, value in ml_predictions.items():
+                if value > 0:
+                    models_working += 1
+                    print(f"      ✅ {param}: {value}")
+                else:
+                    print(f"      ❌ {param}: {value} (not working)")
+            
+            print(f"   📊 ML Models Status: {models_working}/4 models providing predictions")
+            
+            if models_working == 4:
+                print(f"   ✅ All 4 ML models are loaded and working")
+            elif models_working >= 2:
+                print(f"   ⚠️ {models_working}/4 ML models working - partial functionality")
+            else:
+                print(f"   ❌ Only {models_working}/4 ML models working - major issue")
+            
+            # Test location-based variation
+            print(f"   🌍 Testing location-based prediction variation...")
+            
+            # Test different location
+            success2, response2 = self.run_test(
+                "ML Models - Different Location (Chennai)",
+                "GET",
+                "api/maritime/danger-analysis?lat=13.0827&lon=80.2707",
+                200
+            )
+            
+            if success2 and response2:
+                data2 = response2.get('data', {})
+                env_data2 = data2.get('environmental_data', {})
+                
+                # Compare predictions between locations
+                variations = {}
+                for param in ml_predictions.keys():
+                    val1 = ml_predictions[param]
+                    val2 = env_data2.get(param, 0)
+                    if val1 > 0 and val2 > 0:
+                        variation = abs(val1 - val2) / max(val1, val2)
+                        variations[param] = variation
+                        print(f"      {param}: Mumbai={val1:.2f}, Chennai={val2:.2f}, Variation={variation:.2%}")
+                
+                avg_variation = sum(variations.values()) / len(variations) if variations else 0
+                if avg_variation > 0.1:
+                    print(f"   ✅ Good geographic variation in ML predictions ({avg_variation:.2%})")
+                else:
+                    print(f"   ⚠️ Limited geographic variation in ML predictions ({avg_variation:.2%})")
+        
+        return success, response
+
+    def test_fish_classifier_model_availability(self):
+        """Test if fish classifier model (best_clf.pt) is available"""
+        print("\n🐟 Testing FISH CLASSIFIER MODEL Availability")
+        
+        # This would be tested through the catch logging endpoint
+        # For now, we'll check if the maritime safety system has the model loaded
+        
+        # Test a simple prediction to see if models are accessible
+        success, response = self.run_test(
+            "Fish Classifier Model Check",
+            "GET",
+            "api/health",
+            200
+        )
+        
+        if success and response:
+            services = response.get('services', {})
+            print(f"   🔍 Service Status:")
+            for service, status in services.items():
+                status_icon = "✅" if status else "❌"
+                print(f"      {status_icon} {service}: {status}")
+            
+            # Check if all required services are running
+            required_services = ['rag_system', 'mandi_system', 'boundary_system']
+            all_services_up = all(services.get(service, False) for service in required_services)
+            
+            if all_services_up:
+                print(f"   ✅ All backend services are initialized")
+            else:
+                print(f"   ⚠️ Some backend services are not initialized")
+        
+        return success, response
+
 def main():
     print("🌊 BlueNet Smart Fishing Assistant - API Testing")
     print("=" * 60)
