@@ -21,6 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { apiService } from '../../utils/api';
+import JourneyMap from '../maps/JourneyMap';
 
 const JourneyTracking = () => {
   const [journeyState, setJourneyState] = useState({
