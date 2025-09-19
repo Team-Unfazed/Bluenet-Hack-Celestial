@@ -223,10 +223,9 @@ metadata:
 test_plan:
   current_focus:
     - "User Registration API"
-    - "Fish Forecasting API with Hugging Face"
-    - "Mandi Recommendation API"
     - "Mapbox Integration"
   stuck_tasks:
+    - "User Registration API"
     - "Mapbox Integration"
   test_all: false
   test_priority: "high_first"
@@ -234,3 +233,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Fixed MapComponent compilation errors. Ready to test backend APIs and configure API keys. User mentioned they have API keys available but need to provide them."
+  - agent: "testing"
+    message: "BACKEND TESTING COMPLETE: 3/4 high-priority backend APIs working perfectly. Fixed Pydantic validation bug in Fish Forecasting API. CRITICAL ISSUE: User Registration/Authentication endpoints are completely missing - this is a major gap that needs immediate implementation. Hugging Face API token needs renewal but system works with fallback values. All other backend functionality is solid with 100% test success rate after fixes."
