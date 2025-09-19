@@ -278,7 +278,7 @@ const MapComponent = ({
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span>Fair Fishing Zone (<60%)</span>
+                <span>Fair Fishing Zone (&lt;60%)</span>
               </div>
             </>
           )}
