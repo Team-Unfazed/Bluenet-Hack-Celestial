@@ -176,13 +176,13 @@ const Dashboard = () => {
 
         {/* Dashboard tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-7 w-full">
+          <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
             {tabs.map((tab) => {
               const IconComponent = tab.icon;
               return (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
-                  <IconComponent className="h-4 w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1 text-xs">
+                  <IconComponent className="h-3 w-3" />
+                  <span className="hidden sm:inline text-xs">{tab.label}</span>
                 </TabsTrigger>
               );
             })}
