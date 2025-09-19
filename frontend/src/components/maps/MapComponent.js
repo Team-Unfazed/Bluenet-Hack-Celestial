@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import Map, { Source, Layer, Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl';
+import Map from 'react-map-gl';
+import { Source, Layer, Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
