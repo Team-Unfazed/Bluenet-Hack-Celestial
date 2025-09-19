@@ -245,8 +245,10 @@ const FishForecast = () => {
                       
                       <div className="mt-4 pt-4 border-t">
                         <p className="text-sm text-gray-600">
-                          <strong>Distance:</strong> {((zone.lat - forecastData.user_location.lat) ** 2 + 
-                          (zone.lon - forecastData.user_location.lon) ** 2) ** 0.5 * 111).toFixed(1)} km from your location
+                          <strong>Distance:</strong> {(Math.sqrt(
+                            Math.pow(zone.lat - forecastData.user_location.lat, 2) + 
+                            Math.pow(zone.lon - forecastData.user_location.lon, 2)
+                          ) * 111).toFixed(1)} km from your location
                         </p>
                       </div>
                     </CardContent>
