@@ -251,6 +251,7 @@ class MandiRecommendationSystem:
         self.model = None
         self.encoders = {}
         self.initialized = False
+        self.col_map = {}
 
     async def initialize(self):
         if self.initialized:
@@ -261,79 +262,200 @@ class MandiRecommendationSystem:
             self.df = pd.read_csv(ROOT_DIR / "mandi_prices.csv")
             logger.info(f"Loaded {len(self.df)} mandi records")
             
-            # Train model (simplified version of the provided code)
+            # Map columns as per the provided script
+            expected = [
+                'port','port_lat','port_lon','port_state',
+                'mandi','mandi_lat','mandi_lon','mandi_state',
+                'fish_type','fish_size',
+                'mandi_price_inr_per_kg','distance_km','transport_cost_inr_per_kg','net_price_inr_per_kg'
+            ]
+            self.col_map = self._map_columns(self.df, expected)
+            
+            # Train model using the provided algorithm
             await self._train_model()
             self.initialized = True
-            logger.info("Mandi recommendation system initialized")
+            logger.info("Mandi recommendation system initialized successfully")
             
         except Exception as e:
             logger.error(f"Error initializing mandi system: {e}")
-            # Create fallback data
-            self.df = pd.DataFrame({
-                'port': ['Mumbai', 'Chennai', 'Kochi'] * 10,
-                'fish_type': ['pomfret', 'tuna', 'sardine'] * 10,
-                'fish_size': ['medium', 'large', 'small'] * 10,
-                'mandi': ['Sassoon Dock', 'Kasimedu', 'Thoppumpady'] * 10,
-                'mandi_state': ['Maharashtra', 'Tamil Nadu', 'Kerala'] * 10,
-                'net_price_inr_per_kg': np.random.randint(100, 500, 30),
-                'distance_km': np.random.randint(5, 100, 30)
-            })
+            raise e
+
+    def _normalize_colname(self, name: str) -> str:
+        return ''.join(ch.lower() for ch in name if ch.isalnum())
+
+    def _map_columns(self, df, expected_names):
+        col_map = {}
+        norm_to_actual = { self._normalize_colname(c): c for c in df.columns }
+        for k in expected_names:
+            nk = self._normalize_colname(k)
+            col_map[k] = norm_to_actual.get(nk, None)
+        return col_map
 
     async def _train_model(self):
+        # Prepare data exactly as in the provided script
+        raw = self.df.copy()
+        
+        # Normalize fish_size to numeric
+        size_mapping = {'small':1, 's':1, 'sm':1, 'medium':3, 'med':3, 'm':3, 'large':5, 'l':5, 'lg':5}
+        def map_size(v):
+            if pd.isna(v):
+                return np.nan
+            vs = str(v).strip().lower()
+            return size_mapping.get(vs, 3)  # Default to medium
+        raw['fish_size_numeric'] = raw[self.col_map['fish_size']].apply(map_size)
+        
         # Encode categorical variables
-        for cat in ['port', 'mandi', 'fish_type']:
+        for cat in ['port','mandi','fish_type']:
+            actual = self.col_map[cat]
             le = LabelEncoder()
-            self.df[cat + '_enc'] = le.fit_transform(self.df[cat].astype(str))
+            raw[cat+'_enc'] = le.fit_transform(raw[actual].astype(str))
             self.encoders[cat] = le
         
-        # Normalize fish size
-        size_mapping = {'small': 1, 'medium': 3, 'large': 5}
-        self.df['fish_size_numeric'] = self.df['fish_size'].map(lambda x: size_mapping.get(str(x).lower(), 3))
+        # Prepare features
+        feature_cols = [
+            'port_enc','mandi_enc','fish_type_enc',
+            'fish_size_numeric',
+            self.col_map['distance_km'],
+            self.col_map['mandi_price_inr_per_kg'],
+            self.col_map['transport_cost_inr_per_kg']
+        ]
         
-        # Train simple model (placeholder)
-        features = ['port_enc', 'mandi_enc', 'fish_type_enc', 'fish_size_numeric', 'distance_km']
-        available_features = [f for f in features if f in self.df.columns]
+        target_col = self.col_map['net_price_inr_per_kg']
         
-        if 'net_price_inr_per_kg' in self.df.columns and available_features:
-            X = self.df[available_features]
-            y = self.df['net_price_inr_per_kg']
+        # Convert to numeric
+        for c in feature_cols:
+            if c in raw.columns:
+                raw[c] = pd.to_numeric(raw[c], errors='coerce')
+        
+        # Drop rows with missing data
+        core_needed = ['port_enc','mandi_enc','fish_type_enc','fish_size_numeric', target_col]
+        raw_clean = raw.dropna(subset=core_needed)
+        
+        if len(raw_clean) > 0:
+            X = raw_clean[feature_cols]
+            y = raw_clean[target_col].astype(float)
             
-            self.model = RandomForestRegressor(n_estimators=50, random_state=42)
+            # Train Random Forest model
+            self.model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)
             self.model.fit(X, y)
+            
+            # Store the feature columns for prediction
+            self.feature_cols = feature_cols
+        else:
+            logger.error("No clean data available for training")
 
     def get_best_mandi(self, port_name: str, fish_type: str, fish_size: str) -> Dict:
         if not self.initialized or self.df is None:
             return {"error": "System not initialized"}
         
-        # Filter data
-        filtered_df = self.df[
-            (self.df['port'].str.lower() == port_name.lower()) &
-            (self.df['fish_type'].str.lower() == fish_type.lower()) &
-            (self.df['fish_size'].str.lower() == fish_size.lower())
-        ]
-        
-        if filtered_df.empty:
-            # Fallback to best for that port and fish type
-            filtered_df = self.df[
-                (self.df['port'].str.lower() == port_name.lower()) &
-                (self.df['fish_type'].str.lower() == fish_type.lower())
+        try:
+            # Find matching port (case insensitive, partial match)
+            port_actual_col = self.col_map['port']
+            mandi_actual_col = self.col_map['mandi']
+            
+            # Try exact match first
+            port_rows = self.df[self.df[port_actual_col].astype(str).str.lower().str.contains(port_name.lower(), na=False)]
+            
+            if port_rows.empty:
+                # If no match, try broader search
+                port_rows = self.df[self.df[port_actual_col].astype(str).str.lower().str.contains(port_name.split()[0].lower(), na=False)]
+            
+            if port_rows.empty:
+                return {"error": f"No data found for port '{port_name}'"}
+            
+            # Get unique mandis for this port/fish type combination
+            matching_rows = port_rows[
+                port_rows[self.col_map['fish_type']].astype(str).str.lower() == fish_type.lower()
             ]
-        
-        if filtered_df.empty:
-            # Final fallback
-            filtered_df = self.df[self.df['fish_type'].str.lower() == fish_type.lower()]
-        
-        if not filtered_df.empty:
-            best = filtered_df.loc[filtered_df['net_price_inr_per_kg'].idxmax()]
+            
+            if matching_rows.empty:
+                # Fallback to any fish type for the port
+                matching_rows = port_rows
+            
+            # Find the best mandi using ML prediction
+            rows_out = []
+            mandis = matching_rows[mandi_actual_col].astype(str).unique()
+            
+            # Map fish size
+            size_mapping = {'small':1, 'medium':3, 'large':5}
+            fish_size_val = size_mapping.get(fish_size.lower(), 3)
+            
+            for mandi_name in mandis[:10]:  # Limit to top 10 for performance
+                subset = matching_rows[matching_rows[mandi_actual_col].astype(str) == str(mandi_name)]
+                
+                if len(subset) > 0:
+                    # Get median values
+                    mandi_price = float(pd.to_numeric(subset[self.col_map['mandi_price_inr_per_kg']], errors='coerce').median())
+                    distance = float(pd.to_numeric(subset[self.col_map['distance_km']], errors='coerce').median())
+                    transport = float(pd.to_numeric(subset[self.col_map['transport_cost_inr_per_kg']], errors='coerce').median())
+                    
+                    # Predict using trained model if available
+                    if self.model is not None:
+                        try:
+                            # Encode categorical variables
+                            p_enc = self._safe_transform(self.encoders['port'], port_name)
+                            m_enc = self._safe_transform(self.encoders['mandi'], mandi_name)
+                            f_enc = self._safe_transform(self.encoders['fish_type'], fish_type)
+                            
+                            # Create feature vector
+                            features = {
+                                'port_enc': p_enc,
+                                'mandi_enc': m_enc,
+                                'fish_type_enc': f_enc,
+                                'fish_size_numeric': fish_size_val,
+                                self.col_map['distance_km']: distance,
+                                self.col_map['mandi_price_inr_per_kg']: mandi_price,
+                                self.col_map['transport_cost_inr_per_kg']: transport
+                            }
+                            
+                            feat_df = pd.DataFrame([features])
+                            feat_df = feat_df[self.feature_cols]
+                            predicted_net = float(self.model.predict(feat_df)[0])
+                        except Exception as e:
+                            logger.warning(f"Prediction failed for {mandi_name}: {e}")
+                            predicted_net = mandi_price - transport
+                    else:
+                        predicted_net = mandi_price - transport
+                    
+                    # Get mandi state
+                    mandi_state = subset[self.col_map['mandi_state']].iloc[0] if len(subset) > 0 else "Unknown"
+                    
+                    rows_out.append({
+                        'mandi_name': mandi_name,
+                        'mandi_state': mandi_state,
+                        'distance_km': round(distance, 2),
+                        'mandi_price_inr_per_kg': round(mandi_price, 2),
+                        'transport_cost_inr_per_kg': round(transport, 2),
+                        'predicted_net_price_inr_per_kg': round(predicted_net, 2)
+                    })
+            
+            if not rows_out:
+                return {"error": "No matching mandis found"}
+            
+            # Sort by predicted net price (descending)
+            rows_out.sort(key=lambda x: x['predicted_net_price_inr_per_kg'], reverse=True)
+            best = rows_out[0]
+            
             return {
-                "mandi": best["mandi"],
-                "state": best["mandi_state"], 
-                "price_inr": float(best["net_price_inr_per_kg"]),
-                "distance_km": float(best["distance_km"]),
-                "port": best["port"]
+                "mandi": best["mandi_name"],
+                "state": best["mandi_state"],
+                "price_inr": best["predicted_net_price_inr_per_kg"],
+                "distance_km": best["distance_km"],
+                "mandi_price": best["mandi_price_inr_per_kg"],
+                "transport_cost": best["transport_cost_inr_per_kg"],
+                "all_options": rows_out[:5]  # Return top 5 options
             }
-        
-        return {"error": "No data found for the specified criteria"}
+            
+        except Exception as e:
+            logger.error(f"Error in mandi recommendation: {e}")
+            return {"error": f"Failed to get recommendations: {str(e)}"}
+
+    def _safe_transform(self, encoder, value):
+        try:
+            return int(encoder.transform([str(value)])[0])
+        except Exception:
+            # Return -1 for unseen categories (Random Forest can handle this)
+            return -1
 
 # Boundary/Geofencing System (simplified)
 class BoundarySystem:
