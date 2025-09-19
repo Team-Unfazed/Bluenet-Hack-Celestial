@@ -125,9 +125,9 @@ backend:
 
   - task: "Fish Forecasting API with Hugging Face"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -137,6 +137,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "API endpoint works correctly and returns proper fishing zone predictions. Fixed Pydantic validation error in user_location.name field. However, Hugging Face API returns 401 Unauthorized errors due to invalid/expired API token, but system gracefully falls back to default scores (0.5) and still provides meaningful predictions. Mapbox geocoding works correctly."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL ISSUE: All Hugging Face models return 404 Not Found errors. Models pranay096/my_big_model, pranay096/Chlorophyll, pranay096/wind_speed, pranay096/ocean_current do not exist or are not accessible. API key is configured correctly (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) but models are missing. System falls back to 0.5 scores for all predictions. Mapbox integration works perfectly with real location names. This is a model availability issue, not an API key issue."
 
   - task: "Mandi Recommendation API"
     implemented: true
