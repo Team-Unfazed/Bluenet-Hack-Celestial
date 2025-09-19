@@ -20,6 +20,7 @@ from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
 from functools import lru_cache
 import requests
+import httpx
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestRegressor
 import joblib
