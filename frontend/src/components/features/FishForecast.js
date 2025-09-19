@@ -119,6 +119,32 @@ const FishForecast = () => {
     return zones.sort((a, b) => b.score - a.score);
   };
 
+  const fetchFishingZones = async (lat, lon) => {
+    setLoading(true);
+    try {
+      // Use the new mock data generator
+      const zones = generateMockFishingZones(lat, lon);
+      const mockData = {
+        user_location: { lat, lon },
+        best_zones: zones.slice(0, 10), // Take top 10 zones
+        prediction_details: {
+          model_info: "Using enhanced mock data with realistic fishing zones",
+          grid_size: 100,
+          radius_km: 20,
+          timestamp: new Date().toISOString()
+        }
+      };
+      setForecastData(mockData);
+    } catch (error) {
+      console.error('Error generating fishing zones:', error);
+      // Fallback to original mock data
+      const mockData = generateMockForecastData(lat, lon);
+      setForecastData(mockData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const generateMockForecastData = (lat, lon) => {
     return {
       user_location: { lat, lon },
