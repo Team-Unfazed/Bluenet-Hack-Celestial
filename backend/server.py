@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Form, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Form, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
