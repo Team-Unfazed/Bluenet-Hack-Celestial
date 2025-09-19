@@ -50,7 +50,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Hugging Face configuration
-HF_API_TOKEN = "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"
+HF_API_TOKEN = "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"
 HF_MODELS = {
     "sst": "pranay096/my_big_model",
     "chlorophyll": "pranay096/Chlorophyll", 
