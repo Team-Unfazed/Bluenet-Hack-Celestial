@@ -171,6 +171,7 @@ const FishForecast = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="zones">Best Zones</TabsTrigger>
+          <TabsTrigger value="map">Interactive Map</TabsTrigger>
           <TabsTrigger value="environmental">Environmental Data</TabsTrigger>
           <TabsTrigger value="species">Species Forecast</TabsTrigger>
         </TabsList>
