@@ -85,7 +85,7 @@ class FishingZoneRequest(BaseModel):
     radius_km: Optional[float] = 10.0
 
 class FishingZoneResponse(BaseModel):
-    user_location: Dict[str, float]
+    user_location: Dict[str, Any]
     best_zones: List[Dict[str, Any]]
     prediction_details: Dict[str, Any]
 
