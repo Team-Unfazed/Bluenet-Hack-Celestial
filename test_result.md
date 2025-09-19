@@ -188,6 +188,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "RAG system fully functional with 2160 mandi records loaded for context. Chat API returns comprehensive responses with mandi recommendations, follow-up questions, and context used. Gemini AI integration working correctly. Response times are reasonable (~1-2 seconds)."
+      - working: true
+        agent: "testing"
+        comment: "✅ AI ASSISTANT CHAT ENDPOINT FIXED AND WORKING! Issue resolved: Missing @api_router.post('/chat') decorator was causing 404 errors. Fixed by adding proper route decorator to chat_with_assistant function. The RAG system with 2160 mandi records, Gemini AI integration, and comprehensive response generation is now accessible via POST /api/chat endpoint. All backend services (rag_system, mandi_system, boundary_system) are initialized and operational."
 
   - task: "Maritime Safety System - Vessel Tracking"
     implemented: true
