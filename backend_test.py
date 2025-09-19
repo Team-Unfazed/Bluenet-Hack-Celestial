@@ -10,6 +10,7 @@ class BlueNetAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.failed_tests = []
+        self.auth_token = None  # Store JWT token for authenticated requests
 
     def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
         """Run a single API test"""
