@@ -174,7 +174,7 @@ const Dashboard = () => {
 
         {/* Dashboard tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-4 lg:grid-cols-7 w-full">
             {tabs.map((tab) => {
               const IconComponent = tab.icon;
               return (
