@@ -1,53 +1,82 @@
-import { useEffect } from "react";
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import './App.css';
+
+// Import components
+import LandingPage from './components/LandingPage';
+import Dashboard from './components/Dashboard';
+import Navigation from './components/Navigation';
+
+// Import contexts and utilities
+import { AppProvider } from './contexts/AppContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if user is logged in (simplified)
+    const savedUser = localStorage.getItem('bluenet_user');
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('bluenet_user');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const handleLogin = (userData) => {
+    setCurrentUser(userData);
+    localStorage.setItem('bluenet_user', JSON.stringify(userData));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('bluenet_user');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-blue-700 font-medium">Loading BlueNet...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="App">
+    <AppProvider value={{ currentUser, onLogin: handleLogin, onLogout: handleLogout, backendUrl: BACKEND_URL }}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100">
+          {currentUser && <Navigation />}
+          <Routes>
+            <Route 
+              path="/" 
+              element={
+                currentUser ? 
+                <Navigate to="/dashboard" replace /> : 
+                <LandingPage onLogin={handleLogin} />
+              } 
+            />
+            <Route 
+              path="/dashboard" 
+              element={
+                currentUser ? 
+                <Dashboard /> : 
+                <Navigate to="/" replace />
+              } 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </BrowserRouter>
-    </div>
+    </AppProvider>
   );
 }
 
