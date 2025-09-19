@@ -95,9 +95,9 @@ class BlueNetAPITester:
         )
 
     def test_fishing_zones_prediction(self):
-        """Test fishing zones prediction"""
-        return self.run_test(
-            "Fishing Zones Prediction",
+        """Test fishing zones prediction with enhanced environmental analysis"""
+        success, response = self.run_test(
+            "Fishing Zones Prediction - Mumbai",
             "POST",
             "api/predict/fishing-zones",
             200,
@@ -107,6 +107,126 @@ class BlueNetAPITester:
                 "radius_km": 10.0
             }
         )
+        
+        if success and response:
+            # Analyze environmental predictions
+            print(f"   📍 User Location: {response.get('user_location', {}).get('name', 'Unknown')}")
+            
+            best_zones = response.get('best_zones', [])
+            if best_zones:
+                print(f"   🎯 Found {len(best_zones)} fishing zones")
+                
+                # Analyze first zone in detail
+                zone = best_zones[0]
+                sst_score = zone.get('sst', 0)
+                chlorophyll_score = zone.get('chlorophyll', 0)
+                wind_score = zone.get('wind', 0)
+                current_score = zone.get('current', 0)
+                combined_score = zone.get('score', 0)
+                
+                print(f"   🌊 Best Zone Environmental Scores:")
+                print(f"      SST (Sea Surface Temp): {sst_score}")
+                print(f"      Chlorophyll-a: {chlorophyll_score}")
+                print(f"      Wind Conditions: {wind_score}")
+                print(f"      Ocean Current: {current_score}")
+                print(f"      Combined Score: {combined_score}")
+                
+                # Check if predictions are varied (not all 0.5)
+                scores = [sst_score, chlorophyll_score, wind_score, current_score]
+                all_same = all(abs(score - 0.5) < 0.01 for score in scores)
+                varied_scores = len(set(round(score, 1) for score in scores)) > 1
+                
+                if all_same:
+                    print(f"   ⚠️ WARNING: All scores are ~0.5 (fallback values)")
+                elif varied_scores:
+                    print(f"   ✅ GOOD: Environmental scores are varied and realistic")
+                else:
+                    print(f"   ⚠️ NOTICE: Scores show limited variation")
+                
+                # Check score ranges
+                realistic_ranges = {
+                    'sst': (0.1, 0.9),
+                    'chlorophyll': (0.2, 0.9),
+                    'wind': (0.3, 0.8),
+                    'current': (0.4, 0.8)
+                }
+                
+                for param, score in [('sst', sst_score), ('chlorophyll', chlorophyll_score), 
+                                   ('wind', wind_score), ('current', current_score)]:
+                    min_val, max_val = realistic_ranges[param]
+                    if min_val <= score <= max_val:
+                        print(f"   ✅ {param.upper()} score {score} within realistic range [{min_val}-{max_val}]")
+                    else:
+                        print(f"   ⚠️ {param.upper()} score {score} outside expected range [{min_val}-{max_val}]")
+            
+            # Check prediction details
+            pred_details = response.get('prediction_details', {})
+            models_used = pred_details.get('models_used', [])
+            if models_used:
+                print(f"   🤖 Models Used: {len(models_used)} Hugging Face models")
+                for model in models_used:
+                    print(f"      - {model}")
+        
+        return success, response
+
+    def test_fishing_zones_multiple_locations(self):
+        """Test fishing zones prediction at different locations for geographic variation"""
+        locations = [
+            {"name": "Mumbai", "lat": 19.0760, "lon": 72.8777},
+            {"name": "Chennai", "lat": 13.0827, "lon": 80.2707},
+            {"name": "Kochi", "lat": 9.9312, "lon": 76.2673}
+        ]
+        
+        location_results = []
+        
+        for location in locations:
+            print(f"\n   🌍 Testing {location['name']} ({location['lat']}, {location['lon']})")
+            
+            success, response = self.run_test(
+                f"Fishing Zones - {location['name']}",
+                "POST",
+                "api/predict/fishing-zones",
+                200,
+                data={
+                    "latitude": location['lat'],
+                    "longitude": location['lon'],
+                    "radius_km": 5.0
+                }
+            )
+            
+            if success and response:
+                best_zones = response.get('best_zones', [])
+                if best_zones:
+                    zone = best_zones[0]
+                    scores = {
+                        'sst': zone.get('sst', 0),
+                        'chlorophyll': zone.get('chlorophyll', 0),
+                        'wind': zone.get('wind', 0),
+                        'current': zone.get('current', 0),
+                        'combined': zone.get('score', 0)
+                    }
+                    location_results.append({
+                        'location': location['name'],
+                        'scores': scores
+                    })
+                    
+                    print(f"      Best zone scores: SST={scores['sst']:.3f}, Chl={scores['chlorophyll']:.3f}, Wind={scores['wind']:.3f}, Current={scores['current']:.3f}")
+        
+        # Analyze geographic variation
+        if len(location_results) >= 2:
+            print(f"\n   📊 Geographic Variation Analysis:")
+            
+            for param in ['sst', 'chlorophyll', 'wind', 'current']:
+                values = [result['scores'][param] for result in location_results]
+                variation = max(values) - min(values)
+                print(f"      {param.upper()} variation: {variation:.3f} (range: {min(values):.3f} - {max(values):.3f})")
+                
+                if variation > 0.1:
+                    print(f"      ✅ Good geographic variation for {param.upper()}")
+                else:
+                    print(f"      ⚠️ Limited geographic variation for {param.upper()}")
+        
+        return len(location_results) > 0, location_results
 
     def test_mandi_recommendation(self):
         """Test mandi recommendation"""
