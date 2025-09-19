@@ -24,6 +24,8 @@ import JourneyTracking from './features/JourneyTracking';
 import AIAssistant from './features/AIAssistant';
 import ComplianceMonitoring from './features/ComplianceMonitoring';
 import PolicyAnalytics from './features/PolicyAnalytics';
+import CatchLogger from './features/CatchLogger';
+import OfflineData from './features/OfflineData';
 
 import { useApp } from '../contexts/AppContext';
 import { apiService } from '../utils/api';
