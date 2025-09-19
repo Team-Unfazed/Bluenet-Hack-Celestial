@@ -164,13 +164,21 @@ const LandingPage = ({ onLogin }) => {
               <span className="text-2xl font-bold text-gray-900">BlueNet</span>
             </div>
             
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">Features</a>
-              <a href="#how-it-works" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">How it Works</a>
-              <a href="#contact" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">Contact</a>
-            </div>
-            
-            <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex items-center gap-8">
+                <a href="#features" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">{t('features') || 'Features'}</a>
+                <a href="#how-it-works" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">How it Works</a>
+                <a href="#contact" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">Contact</a>
+              </div>
+              
+              <LanguageSelector onLanguageChange={(lang) => console.log('Language changed to:', lang)} />
+              
+              <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+                <DialogTrigger asChild>
+                  <Button className="bg-sky-600 hover:bg-sky-700">
+                    {t('tryDashboard') || 'Get Started'}
+                  </Button>
+                </DialogTrigger>
               <DialogTrigger asChild>
                 <Button className="bg-sky-600 hover:bg-sky-700">
                   Get Started
