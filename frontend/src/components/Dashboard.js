@@ -192,6 +192,10 @@ const Dashboard = () => {
             {renderOverview()}
           </TabsContent>
 
+          <TabsContent value="maritime" className="space-y-6">
+            <MaritimeSafety />
+          </TabsContent>
+
           <TabsContent value="forecast" className="space-y-6">
             <FishForecast />
           </TabsContent>
