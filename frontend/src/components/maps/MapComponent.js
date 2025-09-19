@@ -92,150 +92,146 @@ const MapComponent = ({
 
   return (
     <div className="relative">
-      <Map
-        ref={mapRef}
-        {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
-        style={{ width: '100%', height: `${height}px` }}
-        mapStyle={mapStyle}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        onClick={handleMapClick}
-        cursor="crosshair"
+      {/* Static Map Display */}
+      <div 
+        className="relative w-full rounded-lg overflow-hidden border border-gray-200"
+        style={{ height: `${height}px` }}
       >
-        {/* Fishing Zones Data */}
-        {fishingZones.length > 0 && (
-          <Source id="fishing-zones" type="geojson" data={fishingZonesGeoJSON}>
-            <Layer {...heatmapLayer} />
-            <Layer {...pointsLayer} />
-          </Source>
-        )}
-
-        {/* Journey Route */}
-        {journeyRoute.length > 1 && (
-          <Source id="journey-route" type="geojson" data={journeyRouteGeoJSON}>
-            <Layer {...routeLayer} />
-          </Source>
-        )}
-
-        {/* Maritime Boundaries */}
-        {boundaries.length > 0 && (
-          <Source id="boundaries" type="geojson" data={boundariesGeoJSON}>
-            <Layer {...boundaryLayer} />
-          </Source>
-        )}
-
-        {/* Current Location Marker */}
-        {currentLocation && (
-          <Marker
-            longitude={currentLocation.lon}
-            latitude={currentLocation.lat}
-            anchor="center"
-          >
-            <div className="relative">
-              <div className="w-6 h-6 bg-blue-600 rounded-full border-2 border-white shadow-lg animate-pulse"></div>
-              <div className="absolute -top-1 -left-1 w-8 h-8 bg-blue-400 rounded-full opacity-30 animate-ping"></div>
+        <img
+          src={createMapboxStaticUrl()}
+          alt="Fishing zones map"
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.src = `https://via.placeholder.com/800x${height}/0ea5e9/ffffff?text=Interactive+Map+Loading...`;
+          }}
+        />
+        
+        {/* Interactive Overlay */}
+        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-5 transition-all duration-200">
+          {/* Zone markers overlay */}
+          {fishingZones.map((zone, index) => (
+            <div
+              key={index}
+              className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
+              style={{
+                left: `${50 + (zone.lon - initialViewState.longitude) * 10}%`,
+                top: `${50 - (zone.lat - initialViewState.latitude) * 10}%`,
+              }}
+              onClick={() => setSelectedZone(zone)}
+            >
+              <div className={`w-4 h-4 rounded-full border-2 border-white shadow-lg ${
+                zone.score >= 0.8 ? 'bg-green-500' :
+                zone.score >= 0.6 ? 'bg-yellow-500' :
+                'bg-red-500'
+              }`}>
+              </div>
             </div>
-          </Marker>
-        )}
-
-        {/* User Location Marker */}
-        {userLocation && (
-          <Marker longitude={userLocation.lon} latitude={userLocation.lat} anchor="center">
-            <div className="w-4 h-4 bg-green-600 rounded-full border-2 border-white shadow-lg"></div>
-          </Marker>
-        )}
-
-        {/* Alert Markers */}
-        {alerts.map((alert, index) => (
-          <Marker
-            key={index}
-            longitude={alert.location.lon}
-            latitude={alert.location.lat}
-            anchor="center"
-          >
-            <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-              <AlertTriangle className="w-3 h-3 text-white" />
+          ))}
+          
+          {/* Current location marker */}
+          {currentLocation && (
+            <div
+              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+              style={{
+                left: `${50 + (currentLocation.lon - initialViewState.longitude) * 10}%`,
+                top: `${50 - (currentLocation.lat - initialViewState.latitude) * 10}%`,
+              }}
+            >
+              <div className="w-6 h-6 bg-blue-600 rounded-full border-2 border-white shadow-lg animate-pulse">
+                <div className="absolute -top-1 -left-1 w-8 h-8 bg-blue-400 rounded-full opacity-30 animate-ping"></div>
+              </div>
             </div>
-          </Marker>
-        ))}
-
-        {/* Selected Zone Popup */}
-        {selectedZone && (
-          <Popup
-            longitude={selectedZone.lon}
-            latitude={selectedZone.lat}
-            anchor="bottom"
-            onClose={() => setSelectedZone(null)}
-            closeButton={true}
-            closeOnClick={false}
+          )}
+        </div>
+        
+        {/* Controls overlay */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white shadow-lg"
+            onClick={getCurrentLocation}
           >
-            <Card className="border-0 shadow-none min-w-64">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Fish className="w-4 h-4 text-sky-600" />
-                    <span className="font-medium">Fishing Zone</span>
-                  </div>
-                  <Badge className={getScoreColor(selectedZone.score)}>
-                    {getScoreLabel(selectedZone.score)}
-                  </Badge>
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Score:</span>
-                    <span className="font-medium">{Math.round(selectedZone.score * 100)}%</span>
-                  </div>
-                  {selectedZone.sst && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Sea Temp:</span>
-                      <span className="font-medium">{Math.round(selectedZone.sst * 100)}%</span>
-                    </div>
-                  )}
-                  {selectedZone.chlorophyll && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Chlorophyll:</span>
-                      <span className="font-medium">{Math.round(selectedZone.chlorophyll * 100)}%</span>
-                    </div>
-                  )}
-                  <div className="pt-2 text-xs text-gray-500">
-                    {selectedZone.lat.toFixed(4)}°N, {selectedZone.lon.toFixed(4)}°E
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Popup>
-        )}
+            <MapPin className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"  
+            className="bg-white shadow-lg"
+            onClick={() => window.open(`https://www.google.com/maps/@${currentLocation?.lat || initialViewState.latitude},${currentLocation?.lon || initialViewState.longitude},12z`, '_blank')}
+          >
+            <ExternalLink className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
 
-        {/* Map Controls */}
-        {showControls && (
-          <>
-            <NavigationControl position="top-right" />
-            <GeolocateControl
-              position="top-right"
-              positionOptions={{ enableHighAccuracy: true }}
-              trackUserLocation={true}
-              onGeolocate={handleGeolocate}
-            />
-          </>
-        )}
-      </Map>
+      {/* Selected Zone Info Card */}
+      {selectedZone && (
+        <Card className="absolute top-4 left-4 max-w-sm bg-white shadow-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Fish className="w-4 h-4 text-sky-600" />
+                <span className="font-medium">Fishing Zone</span>
+              </div>
+              <Badge className={getScoreColor(selectedZone.score)}>
+                {getScoreLabel(selectedZone.score)}
+              </Badge>
+            </div>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Score:</span>
+                <span className="font-medium">{Math.round(selectedZone.score * 100)}%</span>
+              </div>
+              {selectedZone.sst && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Sea Temp:</span>
+                  <span className="font-medium">{Math.round(selectedZone.sst * 100)}%</span>
+                </div>
+              )}
+              {selectedZone.chlorophyll && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Chlorophyll:</span>
+                  <span className="font-medium">{Math.round(selectedZone.chlorophyll * 100)}%</span>
+                </div>
+              )}
+              <div className="pt-2 text-xs text-gray-500">
+                {selectedZone.lat.toFixed(4)}°N, {selectedZone.lon.toFixed(4)}°E
+              </div>
+            </div>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full mt-3"
+              onClick={() => setSelectedZone(null)}
+            >
+              Close
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Map Legend */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
         <h4 className="font-medium text-sm mb-2">Map Legend</h4>
         <div className="space-y-1 text-xs">
           {fishingZones.length > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>Excellent Fishing Zone</span>
-            </div>
-          )}
-          {fishingZones.length > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span>Good Fishing Zone</span>
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>Excellent Fishing Zone</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <span>Good Fishing Zone</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>Poor Fishing Zone</span>
+              </div>
+            </>
           )}
           {journeyRoute.length > 1 && (
             <div className="flex items-center gap-2">
