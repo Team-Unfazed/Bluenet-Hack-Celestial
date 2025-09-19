@@ -721,6 +721,14 @@ def main():
     print("\n⚠️ Testing Safety Features...")
     tester.test_disaster_alerts()
     
+    # 🚨 NEW: Test Maritime Safety System (PRIORITY 1 FEATURE)
+    print("\n🚨 Testing Maritime Safety System (PRIORITY 1)...")
+    print("   Testing collision avoidance and dangerous conditions detection...")
+    tester.test_nearby_vessels()
+    tester.test_danger_analysis()
+    tester.test_complete_safety_report()
+    tester.test_maritime_safety_error_handling()
+    
     # Print final results
     print("\n" + "=" * 60)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
