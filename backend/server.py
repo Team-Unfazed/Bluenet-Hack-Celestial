@@ -130,6 +130,38 @@ class DisasterAlert(BaseModel):
     timestamp: datetime
     active: bool
 
+# Authentication Models
+class UserRegister(BaseModel):
+    full_name: str
+    phone: str
+    email: EmailStr
+    password: str
+    role: str = "fisherman"  # fisherman or policymaker
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: Dict[str, Any]
+
+class UserProfile(BaseModel):
+    id: str
+    full_name: str
+    email: str
+    phone: str
+    role: str
+    created_at: datetime
+
+# JWT Configuration
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "bluenet-super-secret-key-12345")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_HOURS = 24
+
+security = HTTPBearer()
+
 # RAG System for AI Assistant
 class RAGSystem:
     def __init__(self):
