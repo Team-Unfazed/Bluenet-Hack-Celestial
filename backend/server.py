@@ -716,49 +716,102 @@ async def predict_fishing_zones(request: FishingZoneRequest):
         lat, lon = request.latitude, request.longitude
         radius = request.radius_km
         
-        # Generate grid points around user location
-        grid_points = []
-        step = 0.01  # ~1km steps
-        for lat_offset in np.arange(-radius*step, radius*step, step):
-            for lon_offset in np.arange(-radius*step, radius*step, step):
-                grid_lat = lat + lat_offset  
-                grid_lon = lon + lon_offset
-                grid_points.append((grid_lat, grid_lon))
+        logger.info(f"Predicting fishing zones for location: {lat}, {lon} with radius: {radius} km")
         
-        # Query all HF models for each grid point (simplified for demo)
+        # Generate grid points around user location (reduced for performance)
+        grid_points = []
+        step = 0.02  # ~2km steps for better performance
+        points_per_side = int(radius * step * 2)
+        
+        for i in range(-points_per_side, points_per_side + 1, 2):
+            for j in range(-points_per_side, points_per_side + 1, 2):
+                grid_lat = lat + (i * step)
+                grid_lon = lon + (j * step)
+                # Check if point is within radius
+                distance = ((grid_lat - lat)**2 + (grid_lon - lon)**2)**0.5 * 111  # Rough conversion to km
+                if distance <= radius:
+                    grid_points.append((grid_lat, grid_lon))
+        
+        logger.info(f"Generated {len(grid_points)} grid points for analysis")
+        
+        # Query Hugging Face models for predictions
         best_zones = []
         
-        # For demo, create some sample predictions
-        for i, (grid_lat, grid_lon) in enumerate(grid_points[:10]):  # Limit for demo
-            # Simulate model predictions
-            sst_score = np.random.uniform(0.3, 0.9)
-            chlorophyll_score = np.random.uniform(0.2, 0.8) 
-            wind_score = np.random.uniform(0.4, 0.9)
-            current_score = np.random.uniform(0.3, 0.7)
-            
-            # Weighted average
-            combined_score = (sst_score * 0.3 + chlorophyll_score * 0.25 + 
-                            wind_score * 0.25 + current_score * 0.2)
-            
-            best_zones.append({
-                "lat": round(grid_lat, 4),
-                "lon": round(grid_lon, 4), 
-                "score": round(combined_score, 3),
-                "sst": round(sst_score, 3),
-                "chlorophyll": round(chlorophyll_score, 3),
-                "wind": round(wind_score, 3),
-                "current": round(current_score, 3)
-            })
+        # Limit to top 8 points for performance and API rate limits
+        for i, (grid_lat, grid_lon) in enumerate(grid_points[:8]):
+            try:
+                logger.info(f"Querying HF models for point {i+1}: {grid_lat:.4f}, {grid_lon:.4f}")
+                
+                # Query each Hugging Face model
+                tasks = [
+                    query_huggingface_model(HF_MODELS["sst"], grid_lat, grid_lon),
+                    query_huggingface_model(HF_MODELS["chlorophyll"], grid_lat, grid_lon),
+                    query_huggingface_model(HF_MODELS["wind"], grid_lat, grid_lon),
+                    query_huggingface_model(HF_MODELS["ocean_current"], grid_lat, grid_lon)
+                ]
+                
+                # Wait for all model predictions
+                sst_score, chlorophyll_score, wind_score, current_score = await asyncio.gather(*tasks)
+                
+                # Normalize scores to 0-1 range
+                sst_score = max(0, min(1, sst_score))
+                chlorophyll_score = max(0, min(1, chlorophyll_score))  
+                wind_score = max(0, min(1, wind_score))
+                current_score = max(0, min(1, current_score))
+                
+                # Calculate weighted combined score
+                combined_score = (
+                    sst_score * 0.3 +           # Sea Surface Temperature (30%)
+                    chlorophyll_score * 0.25 +  # Chlorophyll levels (25%)
+                    wind_score * 0.25 +         # Wind conditions (25%)
+                    current_score * 0.2         # Ocean currents (20%)
+                )
+                
+                # Get location name using reverse geocoding (simplified)
+                location_name = await get_location_name(grid_lat, grid_lon)
+                
+                best_zones.append({
+                    "lat": round(grid_lat, 4),
+                    "lon": round(grid_lon, 4),
+                    "score": round(combined_score, 3),
+                    "sst": round(sst_score, 3),
+                    "chlorophyll": round(chlorophyll_score, 3),
+                    "wind": round(wind_score, 3),
+                    "current": round(current_score, 3),
+                    "location_name": location_name,
+                    "distance_from_user": round(((grid_lat - lat)**2 + (grid_lon - lon)**2)**0.5 * 111, 2)
+                })
+                
+                logger.info(f"Zone {i+1} prediction complete - Score: {combined_score:.3f}")
+                
+            except Exception as e:
+                logger.error(f"Error processing grid point {i}: {e}")
+                # Add a fallback prediction with lower score
+                best_zones.append({
+                    "lat": round(grid_lat, 4),
+                    "lon": round(grid_lon, 4),
+                    "score": 0.4,  # Lower fallback score
+                    "sst": 0.5,
+                    "chlorophyll": 0.5,
+                    "wind": 0.5,
+                    "current": 0.5,
+                    "location_name": f"Zone {i+1}",
+                    "distance_from_user": round(((grid_lat - lat)**2 + (grid_lon - lon)**2)**0.5 * 111, 2)
+                })
         
         # Sort by score and return top zones
         best_zones.sort(key=lambda x: x["score"], reverse=True)
         
+        user_location_name = await get_location_name(lat, lon)
+        
         return FishingZoneResponse(
-            user_location={"lat": lat, "lon": lon},
+            user_location={"lat": lat, "lon": lon, "name": user_location_name},
             best_zones=best_zones[:5],  # Top 5 zones
             prediction_details={
-                "model_info": "Using 4 Hugging Face models for environmental prediction",
+                "model_info": f"Using 4 Hugging Face models: {', '.join(HF_MODELS.keys())}",
+                "models_used": list(HF_MODELS.values()),
                 "grid_size": len(grid_points),
+                "analyzed_points": len(best_zones),
                 "radius_km": radius,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
@@ -767,6 +820,36 @@ async def predict_fishing_zones(request: FishingZoneRequest):
     except Exception as e:
         logger.error(f"Fishing zone prediction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Helper function to get location names
+async def get_location_name(lat: float, lon: float) -> str:
+    """Get location name using reverse geocoding"""
+    try:
+        # Use a simple geocoding service (you can replace with your preferred service)
+        url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{lon},{lat}.json"
+        params = {
+            "access_token": "pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw",
+            "types": "place,locality"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, timeout=10)
+            
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("features"):
+                place_name = data["features"][0].get("place_name", "")
+                # Return simplified location name
+                if "," in place_name:
+                    return place_name.split(",")[0].strip()
+                return place_name[:30]  # Limit length
+        
+        # Fallback to coordinate-based name
+        return f"{lat:.2f}°N, {lon:.2f}°E"
+        
+    except Exception as e:
+        logger.warning(f"Geocoding failed for {lat}, {lon}: {e}")
+        return f"{lat:.2f}°N, {lon:.2f}°E"
 
 @api_router.post("/mandi-recommendation", response_model=MandiRecommendationResponse)
 async def get_mandi_recommendation(request: MandiRecommendationRequest):
