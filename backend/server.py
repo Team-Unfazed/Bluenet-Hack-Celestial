@@ -575,19 +575,43 @@ async def query_huggingface_model(model_name: str, lat: float, lon: float) -> fl
         headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
         api_url = f"https://api-inference.huggingface.co/models/{model_name}"
         
-        payload = {"inputs": [lat, lon]}  # Simplified input format
+        # Prepare input data for environmental prediction models
+        # Each model expects different input format based on environmental parameters
+        if "sst" in model_name.lower() or "big_model" in model_name.lower():
+            # Sea Surface Temperature model
+            payload = {"inputs": [[lat, lon, 27.5, 0.8]]}  # lat, lon, temp, salinity
+        elif "chlorophyll" in model_name.lower():
+            # Chlorophyll model  
+            payload = {"inputs": [[lat, lon, 2.1, 25.0]]}  # lat, lon, chl_concentration, depth
+        elif "wind" in model_name.lower():
+            # Wind speed model
+            payload = {"inputs": [[lat, lon, 12.5, 200.0]]}  # lat, lon, wind_speed, direction
+        elif "ocean_current" in model_name.lower():
+            # Ocean current model
+            payload = {"inputs": [[lat, lon, 0.8, 150.0]]}  # lat, lon, current_speed, direction
+        else:
+            # Default format
+            payload = {"inputs": [[lat, lon, 1.0, 1.0]]}
         
         async with httpx.AsyncClient() as client:
             response = await client.post(api_url, headers=headers, json=payload, timeout=30)
             
         if response.status_code == 200:
             result = response.json()
-            # Extract prediction value (simplified)
+            logger.info(f"HF Model {model_name} response: {result}")
+            
+            # Extract prediction value
             if isinstance(result, list) and len(result) > 0:
-                return float(result[0].get('score', 0.5))
+                if isinstance(result[0], dict):
+                    return float(result[0].get('score', 0.5))
+                elif isinstance(result[0], list) and len(result[0]) > 0:
+                    # Take the first prediction value
+                    return float(result[0][0]) if isinstance(result[0][0], (int, float)) else 0.5
+                else:
+                    return float(result[0]) if isinstance(result[0], (int, float)) else 0.5
             return 0.5
         else:
-            logger.warning(f"HF API error for {model_name}: {response.status_code}")
+            logger.warning(f"HF API error for {model_name}: {response.status_code} - {response.text}")
             return 0.5
             
     except Exception as e:
