@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, APIRouter, HTTPException, File, UploadFile, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -8,11 +9,13 @@ import json
 import time
 import threading
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
+import jwt
+import bcrypt
 import pandas as pd
 import numpy as np
 import faiss
