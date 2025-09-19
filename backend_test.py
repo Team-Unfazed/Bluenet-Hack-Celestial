@@ -298,6 +298,208 @@ class BlueNetAPITester:
             200
         )
 
+    # =============================================================================
+    # 🚨 MARITIME SAFETY ENDPOINTS - COLLISION AVOIDANCE & DANGEROUS CONDITIONS
+    # =============================================================================
+
+    def test_nearby_vessels(self):
+        """Test nearby vessels endpoint for collision avoidance"""
+        print("\n🚨 Testing PRIORITY 1: Real-time vessel tracking for collision avoidance")
+        
+        # Test with Mumbai coordinates as specified in the review request
+        success, response = self.run_test(
+            "Maritime Safety - Nearby Vessels (Mumbai)",
+            "GET",
+            "api/maritime/vessels-nearby?lat=19.0760&lon=72.8777&radius=10",
+            200
+        )
+        
+        if success and response:
+            data = response.get('data', {})
+            vessels = data.get('vessels', [])
+            alert_summary = data.get('alert_summary', {})
+            
+            print(f"   📍 Location: Mumbai ({data.get('user_location', {}).get('latitude')}, {data.get('user_location', {}).get('longitude')})")
+            print(f"   🚢 Vessels found: {data.get('vessels_found', 0)}")
+            print(f"   📊 Alert Summary: DANGER={alert_summary.get('DANGER', 0)}, WARNING={alert_summary.get('WARNING', 0)}, SAFE={alert_summary.get('SAFE', 0)}")
+            
+            # Verify collision alert system
+            if vessels:
+                print(f"   🔍 Analyzing collision alert levels...")
+                for i, vessel in enumerate(vessels[:3]):  # Check first 3 vessels
+                    distance = vessel.get('distance_km', 0)
+                    alert_level = vessel.get('alert_level', {}).get('level', 'UNKNOWN')
+                    vessel_name = vessel.get('ship_name', 'Unknown')
+                    
+                    print(f"      Vessel {i+1}: {vessel_name} - {distance}km - {alert_level}")
+                    
+                    # Verify alert thresholds
+                    if distance <= 2.0 and alert_level != 'DANGER':
+                        print(f"      ❌ CRITICAL: Vessel at {distance}km should be DANGER level, got {alert_level}")
+                    elif distance <= 5.0 and distance > 2.0 and alert_level != 'WARNING':
+                        print(f"      ⚠️ WARNING: Vessel at {distance}km should be WARNING level, got {alert_level}")
+                    elif distance > 5.0 and alert_level != 'SAFE':
+                        print(f"      ⚠️ NOTICE: Vessel at {distance}km should be SAFE level, got {alert_level}")
+                    else:
+                        print(f"      ✅ Alert level correct for distance")
+            else:
+                print(f"   ⚠️ No vessels found - testing with mock data or API unavailable")
+        
+        return success, response
+
+    def test_danger_analysis(self):
+        """Test dangerous currents & rogue wave detection using ML models"""
+        print("\n🌊 Testing PRIORITY 2: Dangerous currents & rogue wave detection")
+        
+        # Test with Mumbai coordinates as specified
+        success, response = self.run_test(
+            "Maritime Safety - Danger Analysis (Mumbai)",
+            "GET",
+            "api/maritime/danger-analysis?lat=19.0760&lon=72.8777",
+            200
+        )
+        
+        if success and response:
+            data = response.get('data', {})
+            env_data = data.get('environmental_data', {})
+            risk_analysis = data.get('risk_analysis', {})
+            recommendations = data.get('recommendations', [])
+            
+            print(f"   🌊 Environmental Conditions:")
+            print(f"      Wind Speed: {env_data.get('wind_speed_knots', 'N/A')} knots")
+            print(f"      Ocean Current: {env_data.get('ocean_current_knots', 'N/A')} knots")
+            print(f"      Sea Surface Temp: {env_data.get('sea_surface_temp_c', 'N/A')}°C")
+            print(f"      Chlorophyll: {env_data.get('chlorophyll_mg_m3', 'N/A')} mg/m³")
+            
+            print(f"   ⚠️ Risk Analysis:")
+            risk_level = risk_analysis.get('overall_risk_level', 'UNKNOWN')
+            risk_message = risk_analysis.get('risk_message', 'No message')
+            rogue_wave_prob = risk_analysis.get('rogue_wave_probability', 0)
+            
+            print(f"      Overall Risk: {risk_level}")
+            print(f"      Risk Message: {risk_message}")
+            print(f"      Rogue Wave Probability: {rogue_wave_prob * 100:.1f}%")
+            
+            # Verify ML model integration
+            danger_factors = risk_analysis.get('danger_factors', {})
+            print(f"   🤖 ML Model Results:")
+            print(f"      Dangerous Currents: {danger_factors.get('dangerous_currents', False)}")
+            print(f"      High Winds: {danger_factors.get('high_winds', False)}")
+            print(f"      Temperature Anomaly: {danger_factors.get('temperature_anomaly', False)}")
+            
+            # Verify safety recommendations
+            print(f"   📋 Safety Recommendations ({len(recommendations)}):")
+            for i, rec in enumerate(recommendations[:3]):  # Show first 3
+                print(f"      {i+1}. {rec}")
+            
+            # Validate environmental data ranges
+            wind_speed = env_data.get('wind_speed_knots', 0)
+            current_speed = env_data.get('ocean_current_knots', 0)
+            sst = env_data.get('sea_surface_temp_c', 0)
+            chlorophyll = env_data.get('chlorophyll_mg_m3', 0)
+            
+            if 0 < wind_speed < 50 and 0 < current_speed < 10 and 20 < sst < 35 and 0 < chlorophyll < 5:
+                print(f"   ✅ Environmental data within realistic ranges")
+            else:
+                print(f"   ⚠️ Some environmental data may be outside realistic ranges")
+        
+        return success, response
+
+    def test_complete_safety_report(self):
+        """Test complete maritime safety report combining vessel tracking + environmental analysis"""
+        print("\n🚨 Testing COMPLETE MARITIME SAFETY REPORT")
+        
+        # Test with Mumbai coordinates and radius as specified
+        success, response = self.run_test(
+            "Maritime Safety - Complete Safety Report",
+            "GET",
+            "api/maritime/complete-safety-report?lat=19.0760&lon=72.8777&radius=10",
+            200
+        )
+        
+        if success and response:
+            data = response.get('data', {})
+            overall_safety = data.get('overall_safety', {})
+            vessel_tracking = data.get('vessel_tracking', {})
+            env_conditions = data.get('environmental_conditions', {})
+            
+            print(f"   🎯 Overall Safety Status:")
+            status = overall_safety.get('status', 'UNKNOWN')
+            color = overall_safety.get('color', 'unknown')
+            message = overall_safety.get('message', 'No message')
+            
+            print(f"      Status: {status} ({color})")
+            print(f"      Message: {message}")
+            
+            print(f"   🚢 Vessel Tracking Summary:")
+            vessels_found = vessel_tracking.get('vessels_found', 0)
+            collision_alerts = vessel_tracking.get('collision_alerts', 0)
+            closest_vessel = vessel_tracking.get('closest_vessel_km', 'N/A')
+            
+            print(f"      Vessels Found: {vessels_found}")
+            print(f"      Collision Alerts: {collision_alerts}")
+            print(f"      Closest Vessel: {closest_vessel} km")
+            
+            print(f"   🌊 Environmental Conditions:")
+            env_risk = env_conditions.get('risk_analysis', {}).get('overall_risk_level', 'UNKNOWN')
+            rogue_wave_risk = env_conditions.get('risk_analysis', {}).get('rogue_wave_probability', 0)
+            
+            print(f"      Environmental Risk: {env_risk}")
+            print(f"      Rogue Wave Risk: {rogue_wave_risk * 100:.1f}%")
+            
+            # Verify overall safety determination logic
+            if status in ['CRITICAL', 'WARNING', 'SAFE']:
+                print(f"   ✅ Overall safety status determination working correctly")
+            else:
+                print(f"   ❌ Overall safety status determination failed")
+            
+            # Check that both vessel and environmental data are present
+            if vessel_tracking and env_conditions:
+                print(f"   ✅ Complete report includes both vessel tracking and environmental analysis")
+            else:
+                print(f"   ❌ Complete report missing vessel tracking or environmental data")
+        
+        return success, response
+
+    def test_maritime_safety_error_handling(self):
+        """Test maritime safety endpoints with invalid coordinates"""
+        print("\n🔧 Testing Maritime Safety Error Handling")
+        
+        # Test with invalid coordinates
+        test_cases = [
+            {"lat": 999, "lon": 999, "name": "Invalid Coordinates"},
+            {"lat": 0, "lon": 0, "name": "Zero Coordinates"},
+            {"lat": 19.0760, "lon": 72.8777, "radius": -5, "name": "Negative Radius"}
+        ]
+        
+        all_passed = True
+        
+        for case in test_cases:
+            lat, lon = case["lat"], case["lon"]
+            radius = case.get("radius", 10)
+            name = case["name"]
+            
+            # Test vessels endpoint
+            vessels_success, _ = self.run_test(
+                f"Error Handling - Vessels ({name})",
+                "GET",
+                f"api/maritime/vessels-nearby?lat={lat}&lon={lon}&radius={radius}",
+                200  # Should handle gracefully, not crash
+            )
+            
+            # Test danger analysis endpoint  
+            danger_success, _ = self.run_test(
+                f"Error Handling - Danger Analysis ({name})",
+                "GET",
+                f"api/maritime/danger-analysis?lat={lat}&lon={lon}",
+                200  # Should handle gracefully
+            )
+            
+            if not (vessels_success and danger_success):
+                all_passed = False
+        
+        return all_passed, {}
+
     # Authentication Tests
     def test_user_registration(self):
         """Test user registration endpoint"""
