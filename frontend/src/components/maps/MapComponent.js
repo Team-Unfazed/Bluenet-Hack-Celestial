@@ -1,10 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Map, Source, Layer, Marker, Popup, NavigationControl, GeolocateControl } from 'react-map-gl';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { MapPin, Navigation, AlertTriangle, Fish, Waves } from 'lucide-react';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { MapPin, Navigation, AlertTriangle, Fish, Waves, ExternalLink } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw';
 
