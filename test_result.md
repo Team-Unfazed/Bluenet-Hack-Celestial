@@ -225,10 +225,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "User Registration API"
     - "Mapbox Integration"
   stuck_tasks:
-    - "User Registration API"
     - "Mapbox Integration"
   test_all: false
   test_priority: "high_first"
