@@ -122,24 +122,61 @@ const FishForecast = () => {
   const fetchFishingZones = async (lat, lon) => {
     setLoading(true);
     try {
-      // Use the new mock data generator
-      const zones = generateMockFishingZones(lat, lon);
-      const mockData = {
-        user_location: { lat, lon },
-        best_zones: zones.slice(0, 10), // Take top 10 zones
-        prediction_details: {
-          model_info: "Using enhanced mock data with realistic fishing zones",
-          grid_size: 100,
-          radius_km: 20,
-          timestamp: new Date().toISOString()
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      
+      const response = await fetch(`${backendUrl}/api/predict/fishing-zones`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lon,
+          radius_km: 15
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🎣 Enhanced ML Fish Forecasting Data:', data);
+        
+        // Process the enhanced data
+        const processedData = {
+          ...data,
+          zones: data.best_zones?.map(zone => ({
+            ...zone,
+            // Ensure compatibility with existing map component
+            latitude: zone.lat,
+            longitude: zone.lon,
+            fishing_score: zone.score,
+            environmental_data: zone.ml_environmental_data || {
+              sea_surface_temp_c: 26.5,
+              wind_speed_knots: 12.0,
+              ocean_current_knots: 2.0,
+              chlorophyll_mg_m3: 1.0
+            }
+          })) || []
+        };
+        
+        setForecastData(processedData);
+        
+        // Log ML model integration success
+        const mlInfo = data.prediction_details?.ml_integration;
+        if (mlInfo) {
+          console.log('✅ ML Models Integration:', mlInfo);
         }
-      };
-      setForecastData(mockData);
+        
+      } else {
+        console.error('Fish forecasting API error:', response.status);
+        // Fallback to enhanced mock data
+        const mockData = generateMockFishingZones(lat, lon);
+        setForecastData({ zones: mockData, user_location: { name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}` } });
+      }
     } catch (error) {
-      console.error('Error generating fishing zones:', error);
-      // Fallback to original mock data
-      const mockData = generateMockForecastData(lat, lon);
-      setForecastData(mockData);
+      console.error('Error fetching fishing zones:', error);
+      // Enhanced fallback with better mock data
+      const mockData = generateMockFishingZones(lat, lon);
+      setForecastData({ zones: mockData, user_location: { name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}` } });
     } finally {
       setLoading(false);
     }
