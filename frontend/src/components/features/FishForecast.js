@@ -58,23 +58,65 @@ const FishForecast = () => {
     }
   };
 
-  const fetchFishingZones = async (lat, lon) => {
-    try {
-      setLoading(true);
-      const response = await apiService.predictFishingZones({
-        latitude: lat,
-        longitude: lon,
-        radius_km: 15
-      });
+  const generateMockFishingZones = (lat, lon) => {
+    // Generate realistic fishing zones around the given location
+    const zones = [];
+    const numZones = 8 + Math.floor(Math.random() * 7); // 8-15 zones
+    
+    for (let i = 0; i < numZones; i++) {
+      // Create zones within 20km radius
+      const distance = 2 + Math.random() * 18; // 2-20 km from center
+      const angle = (i / numZones) * 2 * Math.PI + Math.random() * 0.5; // Spread around
       
-      setForecastData(response.data);
-    } catch (error) {
-      console.error('Failed to fetch fishing zones:', error);
-      // Fallback to mock data
-      setForecastData(generateMockForecastData(lat, lon));
-    } finally {
-      setLoading(false);
+      const zoneLat = lat + (distance / 111) * Math.cos(angle);
+      const zoneLon = lon + (distance / (111 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
+      
+      // Generate realistic environmental scores
+      const sst = 0.3 + Math.random() * 0.5; // Sea surface temperature suitability
+      const chlorophyll = 0.2 + Math.random() * 0.6; // Chlorophyll concentration
+      const wind = 0.4 + Math.random() * 0.4; // Wind conditions (0.4-0.8 good for fishing)
+      const current = 0.3 + Math.random() * 0.5; // Ocean current strength
+      
+      // Combined score with some randomness
+      const combinedScore = (sst * 0.3 + chlorophyll * 0.3 + wind * 0.25 + current * 0.15) + (Math.random() - 0.5) * 0.2;
+      const finalScore = Math.max(0.1, Math.min(0.95, combinedScore));
+      
+      // Determine zone quality
+      let quality = 'fair';
+      let color = '#ef4444'; // red
+      if (finalScore >= 0.8) {
+        quality = 'excellent';
+        color = '#22c55e'; // green
+      } else if (finalScore >= 0.6) {
+        quality = 'good';
+        color = '#eab308'; // yellow
+      }
+      
+      zones.push({
+        lat: zoneLat,
+        lon: zoneLon,
+        score: finalScore,
+        sst: sst,
+        chlorophyll: chlorophyll,
+        wind: wind,
+        current: current,
+        quality: quality,
+        color: color,
+        location_name: `Zone ${i + 1}`,
+        distance_from_user: distance,
+        depth: 15 + Math.random() * 85, // 15-100m depth
+        fish_probability: {
+          pomfret: Math.random() * 0.8 + 0.1,
+          mackerel: Math.random() * 0.9 + 0.1,
+          sardine: Math.random() * 0.7 + 0.2,
+          tuna: Math.random() * 0.6 + 0.1,
+          kingfish: Math.random() * 0.5 + 0.1
+        }
+      });
     }
+    
+    // Sort by score (best first)
+    return zones.sort((a, b) => b.score - a.score);
   };
 
   const generateMockForecastData = (lat, lon) => {
