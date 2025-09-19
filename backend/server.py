@@ -711,6 +711,109 @@ async def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+# Authentication Endpoints
+@api_router.post("/auth/register", response_model=AuthResponse)
+async def register_user(user_data: UserRegister):
+    """Register a new user"""
+    try:
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": user_data.email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Hash password
+        hashed_password = hash_password(user_data.password)
+        
+        # Create user
+        user_id = str(uuid.uuid4())
+        user_doc = {
+            "id": user_id,
+            "full_name": user_data.full_name,
+            "email": user_data.email,
+            "phone": user_data.phone,
+            "role": user_data.role,
+            "password": hashed_password,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        await db.users.insert_one(user_doc)
+        
+        # Create access token
+        token_data = {"sub": user_id, "email": user_data.email, "role": user_data.role}
+        access_token = create_access_token(token_data)
+        
+        # Return user data without password
+        user_response = {
+            "id": user_id,
+            "full_name": user_data.full_name,
+            "email": user_data.email,
+            "phone": user_data.phone,
+            "role": user_data.role,
+            "created_at": user_doc["created_at"]
+        }
+        
+        return AuthResponse(
+            access_token=access_token,
+            user=user_response
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail="Registration failed")
+
+@api_router.post("/auth/login", response_model=AuthResponse)
+async def login_user(login_data: UserLogin):
+    """Login user"""
+    try:
+        # Find user by email
+        user = await db.users.find_one({"email": login_data.email})
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Verify password
+        if not verify_password(login_data.password, user["password"]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Create access token
+        token_data = {"sub": user["id"], "email": user["email"], "role": user["role"]}
+        access_token = create_access_token(token_data)
+        
+        # Return user data without password
+        user_response = {
+            "id": user["id"],
+            "full_name": user["full_name"],
+            "email": user["email"],
+            "phone": user["phone"],
+            "role": user["role"],
+            "created_at": user["created_at"]
+        }
+        
+        return AuthResponse(
+            access_token=access_token,
+            user=user_response
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Login failed")
+
+@api_router.get("/auth/me", response_model=UserProfile)
+async def get_current_user_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get current user profile"""
+    return UserProfile(
+        id=current_user["id"],
+        full_name=current_user["full_name"],
+        email=current_user["email"],
+        phone=current_user["phone"],
+        role=current_user["role"],
+        created_at=current_user["created_at"]
+    )
+
 @api_router.post("/chat", response_model=ChatResponse)
 async def chat_with_assistant(query: ChatQuery):
     start_time = time.time()
