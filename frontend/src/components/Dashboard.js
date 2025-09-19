@@ -110,14 +110,17 @@ const Dashboard = () => {
         { id: 'overview', label: 'Overview', icon: BarChart3 },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
         { id: 'compliance', label: 'Compliance', icon: AlertTriangle },
-        { id: 'assistant', label: 'AI Assistant', icon: MessageSquare }
+        { id: 'assistant', label: 'AI Assistant', icon: MessageSquare },
+        { id: 'offline', label: 'Offline Data', icon: Database }
       ]
     : [
         { id: 'overview', label: 'Overview', icon: BarChart3 },
         { id: 'forecast', label: 'Fish Forecast', icon: Fish },
         { id: 'market', label: 'Market Prices', icon: TrendingUp },
         { id: 'journey', label: 'Journey Track', icon: NavigationIcon },
-        { id: 'assistant', label: 'AI Assistant', icon: MessageSquare }
+        { id: 'catch', label: 'Catch Logger', icon: Camera },
+        { id: 'assistant', label: 'AI Assistant', icon: MessageSquare },
+        { id: 'offline', label: 'Offline Data', icon: Database }
       ];
 
   if (dashboardData.loading) {
