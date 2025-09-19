@@ -12,14 +12,20 @@ class BlueNetAPITester:
         self.failed_tests = []
         self.auth_token = None  # Store JWT token for authenticated requests
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
+    def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30, auth_required=False):
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         headers = {'Content-Type': 'application/json'}
+        
+        # Add authorization header if auth is required
+        if auth_required and self.auth_token:
+            headers['Authorization'] = f'Bearer {self.auth_token}'
 
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
         print(f"   URL: {url}")
+        if auth_required:
+            print(f"   Auth: {'✓ Token provided' if self.auth_token else '✗ No token'}")
         
         try:
             if method == 'GET':
