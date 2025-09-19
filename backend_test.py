@@ -506,6 +506,7 @@ def main():
     
     print("\n🎣 Testing Fishing Features...")
     tester.test_fishing_zones_prediction()
+    tester.test_fishing_zones_multiple_locations()
     tester.test_mandi_recommendation()
     
     print("\n🚢 Testing Journey Tracking...")
