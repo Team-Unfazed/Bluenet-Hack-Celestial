@@ -364,6 +364,22 @@ def main():
     tester.test_root_endpoint()
     tester.test_health_check()
     
+    # Test authentication endpoints (NEW)
+    print("\n🔐 Testing Authentication System...")
+    print("   Testing user registration flow...")
+    tester.test_user_registration()
+    tester.test_duplicate_registration()
+    
+    print("   Testing user login flow...")
+    tester.test_user_login_success()
+    tester.test_user_login_invalid_email()
+    tester.test_user_login_wrong_password()
+    
+    print("   Testing protected routes...")
+    tester.test_get_current_user_with_token()
+    tester.test_get_current_user_without_token()
+    tester.test_get_current_user_invalid_token()
+    
     # Test core features
     print("\n🤖 Testing AI Assistant...")
     tester.test_chat_assistant()
@@ -398,6 +414,13 @@ def main():
     
     success_rate = (tester.tests_passed / tester.tests_run) * 100 if tester.tests_run > 0 else 0
     print(f"\n🎯 Success Rate: {success_rate:.1f}%")
+    
+    # Enhanced reporting for authentication
+    auth_tests = [test for test in tester.failed_tests if 'auth' in test['name'].lower() or 'login' in test['name'].lower() or 'registration' in test['name'].lower()]
+    if auth_tests:
+        print(f"\n🔐 Authentication Issues Found ({len(auth_tests)}):")
+        for test in auth_tests:
+            print(f"   • {test['name']}")
     
     if success_rate >= 80:
         print("✅ Backend API is functioning well!")
