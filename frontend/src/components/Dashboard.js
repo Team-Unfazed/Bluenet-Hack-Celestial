@@ -206,6 +206,14 @@ const Dashboard = () => {
             <AIAssistant />
           </TabsContent>
 
+          <TabsContent value="catch" className="space-y-6">
+            <CatchLogger />
+          </TabsContent>
+
+          <TabsContent value="offline" className="space-y-6">
+            <OfflineData />
+          </TabsContent>
+
           {currentUser?.role === 'policymaker' && (
             <>
               <TabsContent value="analytics" className="space-y-6">
