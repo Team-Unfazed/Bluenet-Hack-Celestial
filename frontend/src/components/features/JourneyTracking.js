@@ -467,29 +467,13 @@ const JourneyTracking = () => {
         </TabsContent>
 
         <TabsContent value="map" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Waves className="w-5 h-5 text-sky-600" />
-                Live Vessel Map
-              </CardTitle>
-              <CardDescription>
-                Interactive map with real-time location and boundary monitoring
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Map Integration</h3>
-                  <p className="text-gray-500">
-                    Mapbox integration will be implemented here for real-time vessel tracking,
-                    boundary visualization, and route history.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <JourneyMap 
+            currentJourney={journeyState.currentJourney}
+            journeyHistory={journeyState.journeyHistory}
+            isActive={journeyState.isActive}
+            onStartJourney={() => setShowStartDialog(true)}
+            onStopJourney={stopJourney}
+          />
         </TabsContent>
       </Tabs>
     </div>
