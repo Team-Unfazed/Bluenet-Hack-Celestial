@@ -14,7 +14,10 @@ import {
   Waves,
   MapPin,
   Users,
-  Shield
+  Shield,
+  Camera,
+  Database,
+  Globe
 } from 'lucide-react';
 
 // Import feature components
