@@ -8,6 +8,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw';
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw';
+
 const MapComponent = ({
   initialViewState = {
     longitude: 72.8777,
@@ -22,21 +24,26 @@ const MapComponent = ({
   alerts = [],
   onLocationChange = null,
   showControls = true,
-  mapStyle = "satellite"
+  mapStyle = "mapbox://styles/mapbox/satellite-streets-v12"
 }) => {
+  const mapRef = useRef();
+  const [viewState, setViewState] = useState(initialViewState);
   const [selectedZone, setSelectedZone] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     if (currentLocation) {
-      setUserLocation(currentLocation);
+      setViewState(prev => ({
+        ...prev,
+        longitude: currentLocation.lon,
+        latitude: currentLocation.lat
+      }));
     }
   }, [currentLocation]);
 
   const getScoreColor = (score) => {
-    if (score >= 0.8) return 'bg-green-100 text-green-800';
-    if (score >= 0.6) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (score >= 0.8) return '#22c55e'; // green
+    if (score >= 0.6) return '#eab308'; // yellow
+    return '#ef4444'; // red
   };
 
   const getScoreLabel = (score) => {
@@ -45,51 +52,76 @@ const MapComponent = ({
     return 'Poor';
   };
 
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLocation = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          };
-          setUserLocation(newLocation);
-          if (onLocationChange) {
-            onLocationChange({ longitude: newLocation.lon, latitude: newLocation.lat });
-          }
-        },
-        (error) => {
-          console.warn('Geolocation error:', error);
-        }
-      );
+  const handleGeolocate = (e) => {
+    if (onLocationChange) {
+      onLocationChange({ longitude: e.coords.longitude, latitude: e.coords.latitude });
     }
   };
 
-  // Create Mapbox URL for the static map
-  const createMapboxStaticUrl = () => {
-    const baseUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static';
-    const token = 'pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw';
-    
-    let overlays = [];
-    
-    // Add fishing zones as pins
-    fishingZones.forEach((zone, index) => {
-      const color = zone.score >= 0.8 ? 'green' : zone.score >= 0.6 ? 'yellow' : 'red';
-      overlays.push(`pin-s-${index + 1}+${color}(${zone.lon},${zone.lat})`);
-    });
-    
-    // Add current location
-    if (currentLocation) {
-      overlays.push(`pin-l-marker+blue(${currentLocation.lon},${currentLocation.lat})`);
+  // Create GeoJSON for fishing zones heatmap
+  const fishingZonesGeoJSON = {
+    type: 'FeatureCollection',
+    features: fishingZones.map((zone, index) => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [zone.lon, zone.lat]
+      },
+      properties: {
+        id: index,
+        score: zone.score || 0.5,
+        sst: zone.sst || 0,
+        chlorophyll: zone.chlorophyll || 0,
+        wind: zone.wind || 0,
+        current: zone.current || 0,
+        location_name: zone.location_name || `Zone ${index + 1}`
+      }
+    }))
+  };
+
+  // Heatmap layer style
+  const heatmapLayer = {
+    id: 'fishing-zones-heatmap',
+    type: 'heatmap',
+    source: 'fishing-zones',
+    maxzoom: 15,
+    paint: {
+      'heatmap-weight': ['interpolate', ['linear'], ['get', 'score'], 0, 0, 1, 1],
+      'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+      'heatmap-color': [
+        'interpolate',
+        ['linear'],
+        ['heatmap-density'],
+        0, 'rgba(33,102,172,0)',
+        0.2, 'rgb(103,169,207)',
+        0.4, 'rgb(209,229,240)',
+        0.6, 'rgb(253,219,199)',
+        0.8, 'rgb(239,138,98)',
+        1, 'rgb(178,24,43)'
+      ],
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
+      'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 15, 0]
     }
-    
-    const center = currentLocation ? 
-      `${currentLocation.lon},${currentLocation.lat}` : 
-      `${initialViewState.longitude},${initialViewState.latitude}`;
-    
-    const overlayString = overlays.length > 0 ? overlays.join(',') + '/' : '';
-    
-    return `${baseUrl}/${overlayString}${center},${initialViewState.zoom}/${800}x${height}?access_token=${token}`;
+  };
+
+  // Points layer for fishing zones
+  const pointsLayer = {
+    id: 'fishing-zones-points',
+    type: 'circle',
+    source: 'fishing-zones',
+    minzoom: 10,
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['get', 'score'], 0, 6, 1, 14],
+      'circle-color': [
+        'case',
+        ['>=', ['get', 'score'], 0.8], '#22c55e',
+        ['>=', ['get', 'score'], 0.6], '#eab308',
+        '#ef4444'
+      ],
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-opacity': 0.8
+    }
   };
 
   return (
