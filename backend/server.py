@@ -854,6 +854,120 @@ async def get_current_user_profile(current_user: Dict[str, Any] = Depends(get_cu
         created_at=current_user["created_at"]
     )
 
+# =============================================================================
+# 🚨 MARITIME SAFETY ENDPOINTS - COLLISION AVOIDANCE & DANGEROUS CONDITIONS
+# =============================================================================
+
+@api_router.get("/maritime/vessels-nearby")
+async def get_nearby_vessels_endpoint(
+    lat: float = Query(..., description="User latitude"),
+    lon: float = Query(..., description="User longitude"), 
+    radius: float = Query(10, description="Search radius in km")
+):
+    """
+    🚨 PRIORITY 1: Real-time vessel tracking for collision avoidance
+    Returns nearby vessels with collision alert levels
+    """
+    try:
+        vessels = await maritime_safety.get_nearby_vessels(lat, lon, radius)
+        
+        # Count alert levels
+        alert_counts = {'DANGER': 0, 'WARNING': 0, 'SAFE': 0}
+        for vessel in vessels:
+            alert_counts[vessel['alert_level']['level']] += 1
+        
+        return {
+            "status": "success",
+            "data": {
+                "user_location": {"latitude": lat, "longitude": lon},
+                "search_radius_km": radius,
+                "vessels_found": len(vessels),
+                "alert_summary": alert_counts,
+                "vessels": vessels,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error fetching nearby vessels: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch vessel data")
+
+@api_router.get("/maritime/danger-analysis")
+async def analyze_maritime_dangers(
+    lat: float = Query(..., description="Location latitude"),
+    lon: float = Query(..., description="Location longitude")
+):
+    """
+    🌊 PRIORITY 2: Dangerous currents & rogue wave detection using ML models
+    Returns comprehensive risk analysis with safety recommendations
+    """
+    try:
+        danger_analysis = maritime_safety.detect_dangerous_conditions(lat, lon)
+        
+        return {
+            "status": "success", 
+            "data": danger_analysis
+        }
+    except Exception as e:
+        logger.error(f"Error analyzing maritime dangers: {e}")
+        raise HTTPException(status_code=500, detail="Failed to analyze maritime conditions")
+
+@api_router.get("/maritime/complete-safety-report")
+async def get_complete_safety_report(
+    lat: float = Query(..., description="User latitude"),
+    lon: float = Query(..., description="User longitude"),
+    radius: float = Query(10, description="Vessel search radius in km")
+):
+    """
+    🚨 COMPLETE MARITIME SAFETY REPORT
+    Combines vessel tracking + environmental danger analysis
+    """
+    try:
+        # Get both vessel data and environmental analysis
+        vessels = await maritime_safety.get_nearby_vessels(lat, lon, radius)
+        danger_analysis = maritime_safety.detect_dangerous_conditions(lat, lon)
+        
+        # Determine overall safety status
+        vessel_alerts = [v['alert_level']['level'] for v in vessels]
+        has_vessel_danger = any(level in ['DANGER', 'WARNING'] for level in vessel_alerts)
+        env_risk = danger_analysis['risk_analysis']['overall_risk_level']
+        
+        # Overall status
+        if 'DANGER' in vessel_alerts or env_risk in ['DANGER', 'EXTREME_DANGER']:
+            overall_status = "CRITICAL"
+            status_color = "red"
+            status_message = "🚨 CRITICAL CONDITIONS - Immediate action required"
+        elif 'WARNING' in vessel_alerts or env_risk == 'CAUTION':
+            overall_status = "WARNING"
+            status_color = "orange"
+            status_message = "⚠️ WARNING CONDITIONS - Exercise caution"
+        else:
+            overall_status = "SAFE"
+            status_color = "green"
+            status_message = "✅ CONDITIONS SAFE - Normal operations"
+        
+        return {
+            "status": "success",
+            "data": {
+                "location": {"latitude": lat, "longitude": lon},
+                "overall_safety": {
+                    "status": overall_status,
+                    "color": status_color,
+                    "message": status_message
+                },
+                "vessel_tracking": {
+                    "vessels_found": len(vessels),
+                    "closest_vessel_km": vessels[0]["distance_km"] if vessels else None,
+                    "collision_alerts": len([v for v in vessels if v['alert_level']['level'] != 'SAFE']),
+                    "vessels": vessels[:5]  # Top 5 closest vessels
+                },
+                "environmental_conditions": danger_analysis,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error generating safety report: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate safety report")
+
 @api_router.post("/chat", response_model=ChatResponse)
 async def chat_with_assistant(query: ChatQuery):
     start_time = time.time()
