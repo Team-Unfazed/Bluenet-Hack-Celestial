@@ -30,6 +30,7 @@ import joblib
 from shapely.geometry import shape, Point, LineString
 from geopy.distance import geodesic
 import aiofiles
+from maritime_safety import maritime_safety
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
