@@ -366,10 +366,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Maritime Safety System - Vessel Tracking"
-    - "Maritime Safety System - Danger Analysis" 
-    - "Maritime Safety System - Complete Report"
-  stuck_tasks: []
+    - "Authentication System Frontend"
+  stuck_tasks:
+    - "Authentication System Frontend"
   test_all: false
   test_priority: "high_first"
 
