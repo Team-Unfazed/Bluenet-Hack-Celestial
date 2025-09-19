@@ -1141,6 +1141,8 @@ def check_fish_compliance(species: str, weight_kg: float) -> Dict[str, Any]:
             "min_weight_kg": 0,
             "season_restricted": False
         }
+
+@api_router.post("/chat", response_model=ChatResponse)
 async def chat_with_assistant(query: ChatQuery):
     start_time = time.time()
     await initialize_systems()
