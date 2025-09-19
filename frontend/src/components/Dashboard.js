@@ -116,6 +116,7 @@ const Dashboard = () => {
       ]
     : [
         { id: 'overview', label: 'Overview', icon: BarChart3 },
+        { id: 'maritime', label: 'Maritime Safety', icon: Shield },
         { id: 'forecast', label: 'Fish Forecast', icon: Fish },
         { id: 'market', label: 'Market Prices', icon: TrendingUp },
         { id: 'journey', label: 'Journey Track', icon: NavigationIcon },
