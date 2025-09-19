@@ -172,13 +172,14 @@ const LandingPage = ({ onLogin }) => {
               </div>
               
               <LanguageSelector onLanguageChange={(lang) => console.log('Language changed to:', lang)} />
-              
-              <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
-                <DialogTrigger asChild>
-                  <Button className="bg-sky-600 hover:bg-sky-700">
-                    {t('tryDashboard') || 'Get Started'}
-                  </Button>
-                </DialogTrigger>
+            </div>
+            
+            <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+              <DialogTrigger asChild>
+                <Button className="bg-sky-600 hover:bg-sky-700">
+                  {t('tryDashboard') || 'Get Started'}
+                </Button>
+              </DialogTrigger>
               <DialogTrigger asChild>
                 <Button className="bg-sky-600 hover:bg-sky-700">
                   Get Started
