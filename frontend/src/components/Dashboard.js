@@ -29,6 +29,7 @@ import ComplianceMonitoring from './features/ComplianceMonitoring';
 import PolicyAnalytics from './features/PolicyAnalytics';
 import CatchLogger from './features/CatchLogger';
 import OfflineData from './features/OfflineData';
+import MaritimeSafety from './features/MaritimeSafety';
 
 import { useApp } from '../contexts/AppContext';
 import { apiService } from '../utils/api';
