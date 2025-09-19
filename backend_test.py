@@ -178,6 +178,181 @@ class BlueNetAPITester:
             200
         )
 
+    # Authentication Tests
+    def test_user_registration(self):
+        """Test user registration endpoint"""
+        test_user_data = {
+            "full_name": "Test Fisher",
+            "phone": "+91 9876543210",
+            "email": "testfisher@example.com",
+            "password": "testpassword123",
+            "role": "fisherman"
+        }
+        
+        success, response = self.run_test(
+            "User Registration",
+            "POST",
+            "api/auth/register",
+            200,
+            data=test_user_data
+        )
+        
+        if success and response:
+            # Store the token for subsequent tests
+            self.auth_token = response.get('access_token')
+            print(f"   ✓ JWT Token received: {self.auth_token[:20]}..." if self.auth_token else "   ✗ No token in response")
+            
+            # Verify response structure
+            expected_keys = ['access_token', 'token_type', 'user']
+            missing_keys = [key for key in expected_keys if key not in response]
+            if missing_keys:
+                print(f"   ⚠️ Missing response keys: {missing_keys}")
+            
+            # Verify user data
+            user_data = response.get('user', {})
+            if user_data:
+                print(f"   ✓ User created: {user_data.get('full_name')} ({user_data.get('email')})")
+                print(f"   ✓ User role: {user_data.get('role')}")
+                print(f"   ✓ User ID: {user_data.get('id')}")
+        
+        return success, response
+
+    def test_duplicate_registration(self):
+        """Test duplicate email registration (should fail)"""
+        duplicate_user_data = {
+            "full_name": "Another Fisher",
+            "phone": "+91 9876543211",
+            "email": "testfisher@example.com",  # Same email as previous test
+            "password": "anotherpassword123",
+            "role": "fisherman"
+        }
+        
+        return self.run_test(
+            "Duplicate Email Registration",
+            "POST",
+            "api/auth/register",
+            400,  # Should return 400 for duplicate email
+            data=duplicate_user_data
+        )
+
+    def test_user_login_success(self):
+        """Test successful user login"""
+        login_data = {
+            "email": "testfisher@example.com",
+            "password": "testpassword123"
+        }
+        
+        success, response = self.run_test(
+            "User Login - Valid Credentials",
+            "POST",
+            "api/auth/login",
+            200,
+            data=login_data
+        )
+        
+        if success and response:
+            # Update token from login response
+            self.auth_token = response.get('access_token')
+            print(f"   ✓ Login JWT Token: {self.auth_token[:20]}..." if self.auth_token else "   ✗ No token in response")
+            
+            # Verify response structure
+            expected_keys = ['access_token', 'token_type', 'user']
+            missing_keys = [key for key in expected_keys if key not in response]
+            if missing_keys:
+                print(f"   ⚠️ Missing response keys: {missing_keys}")
+        
+        return success, response
+
+    def test_user_login_invalid_email(self):
+        """Test login with invalid email"""
+        login_data = {
+            "email": "nonexistent@example.com",
+            "password": "testpassword123"
+        }
+        
+        return self.run_test(
+            "User Login - Invalid Email",
+            "POST",
+            "api/auth/login",
+            401,  # Should return 401 for invalid credentials
+            data=login_data
+        )
+
+    def test_user_login_wrong_password(self):
+        """Test login with wrong password"""
+        login_data = {
+            "email": "testfisher@example.com",
+            "password": "wrongpassword"
+        }
+        
+        return self.run_test(
+            "User Login - Wrong Password",
+            "POST",
+            "api/auth/login",
+            401,  # Should return 401 for invalid credentials
+            data=login_data
+        )
+
+    def test_get_current_user_with_token(self):
+        """Test getting current user profile with valid token"""
+        if not self.auth_token:
+            print("❌ Skipping authenticated user profile test - no auth token available")
+            return False, {}
+        
+        success, response = self.run_test(
+            "Get Current User Profile - With Token",
+            "GET",
+            "api/auth/me",
+            200,
+            auth_required=True
+        )
+        
+        if success and response:
+            expected_keys = ['id', 'full_name', 'email', 'phone', 'role', 'created_at']
+            missing_keys = [key for key in expected_keys if key not in response]
+            if missing_keys:
+                print(f"   ⚠️ Missing profile keys: {missing_keys}")
+            else:
+                print(f"   ✓ Profile complete: {response.get('full_name')} ({response.get('role')})")
+        
+        return success, response
+
+    def test_get_current_user_without_token(self):
+        """Test getting current user profile without token (should fail)"""
+        # Temporarily clear token
+        original_token = self.auth_token
+        self.auth_token = None
+        
+        success, response = self.run_test(
+            "Get Current User Profile - No Token",
+            "GET",
+            "api/auth/me",
+            401,  # Should return 401 for missing token
+            auth_required=True
+        )
+        
+        # Restore token
+        self.auth_token = original_token
+        return success, response
+
+    def test_get_current_user_invalid_token(self):
+        """Test getting current user profile with invalid token"""
+        # Temporarily set invalid token
+        original_token = self.auth_token
+        self.auth_token = "invalid.jwt.token"
+        
+        success, response = self.run_test(
+            "Get Current User Profile - Invalid Token",
+            "GET",
+            "api/auth/me",
+            401,  # Should return 401 for invalid token
+            auth_required=True
+        )
+        
+        # Restore token
+        self.auth_token = original_token
+        return success, response
+
 def main():
     print("🌊 BlueNet Smart Fishing Assistant - API Testing")
     print("=" * 60)
