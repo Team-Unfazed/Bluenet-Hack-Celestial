@@ -261,6 +261,18 @@ const FishForecast = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="map" className="space-y-4">
+          <FishingZonesMap 
+            fishingZones={forecastData?.best_zones || []}
+            userLocation={forecastData?.user_location}
+            onLocationUpdate={(lat, lon) => {
+              setLocation({ latitude: lat, longitude: lon });
+              fetchFishingZones(lat, lon);
+            }}
+            loading={loading}
+          />
+        </TabsContent>
+
         <TabsContent value="environmental" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
