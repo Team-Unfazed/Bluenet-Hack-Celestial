@@ -1071,6 +1071,18 @@ def main():
     tester.test_complete_safety_report()
     tester.test_maritime_safety_error_handling()
     
+    # 🎣 NEW: Test Enhanced Fish Forecasting & Catch Logging (REVIEW REQUEST PRIORITY)
+    print("\n🎣 Testing Enhanced Fish Forecasting & Catch Logging (REVIEW REQUEST)...")
+    print("   Testing enhanced fish forecasting with real ML models...")
+    tester.test_enhanced_fish_forecasting_mumbai()
+    print("   Testing catch logging with image classification...")
+    tester.test_catch_logging_with_image_classification()
+    
+    # 🤖 NEW: Test ML Model Integration
+    print("\n🤖 Testing ML Model Integration...")
+    tester.test_ml_model_verification()
+    tester.test_fish_classifier_model_availability()
+    
     # Print final results
     print("\n" + "=" * 60)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
