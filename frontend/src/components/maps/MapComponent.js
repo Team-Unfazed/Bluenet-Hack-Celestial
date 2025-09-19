@@ -20,143 +20,16 @@ const MapComponent = ({
   alerts = [],
   onLocationChange = null,
   showControls = true,
-  mapStyle = "mapbox://styles/mapbox/satellite-streets-v12"
+  mapStyle = "satellite"
 }) => {
-  const mapRef = useRef(null);
-  const [viewState, setViewState] = useState(initialViewState);
   const [selectedZone, setSelectedZone] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     if (currentLocation) {
-      setViewState(prev => ({
-        ...prev,
-        longitude: currentLocation.lon,
-        latitude: currentLocation.lat
-      }));
+      setUserLocation(currentLocation);
     }
   }, [currentLocation]);
-
-  // Create GeoJSON for fishing zones heatmap
-  const fishingZonesGeoJSON = {
-    type: 'FeatureCollection',
-    features: fishingZones.map((zone, index) => ({
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [zone.lon, zone.lat]
-      },
-      properties: {
-        id: index,
-        score: zone.score || 0.5,
-        sst: zone.sst || 0,
-        chlorophyll: zone.chlorophyll || 0,
-        wind: zone.wind || 0,
-        current: zone.current || 0
-      }
-    }))
-  };
-
-  // Create GeoJSON for journey route
-  const journeyRouteGeoJSON = {
-    type: 'FeatureCollection',
-    features: journeyRoute.length > 1 ? [{
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: journeyRoute.map(point => [point.lon, point.lat])
-      },
-      properties: {}
-    }] : []
-  };
-
-  // Create GeoJSON for maritime boundaries
-  const boundariesGeoJSON = {
-    type: 'FeatureCollection',
-    features: boundaries.map((boundary, index) => ({
-      type: 'Feature',
-      geometry: boundary.geometry,
-      properties: {
-        id: index,
-        name: boundary.name || 'Maritime Boundary',
-        type: boundary.type || 'boundary'
-      }
-    }))
-  };
-
-  // Heatmap layer style
-  const heatmapLayer = {
-    id: 'fishing-zones-heatmap',
-    type: 'heatmap',
-    source: 'fishing-zones',
-    maxzoom: 15,
-    paint: {
-      'heatmap-weight': ['interpolate', ['linear'], ['get', 'score'], 0, 0, 1, 1],
-      'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
-      'heatmap-color': [
-        'interpolate',
-        ['linear'],
-        ['heatmap-density'],
-        0, 'rgba(33,102,172,0)',
-        0.2, 'rgb(103,169,207)',
-        0.4, 'rgb(209,229,240)',
-        0.6, 'rgb(253,219,199)',
-        0.8, 'rgb(239,138,98)',
-        1, 'rgb(178,24,43)'
-      ],
-      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
-      'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 15, 0]
-    }
-  };
-
-  // Points layer for fishing zones
-  const pointsLayer = {
-    id: 'fishing-zones-points',
-    type: 'circle',
-    source: 'fishing-zones',
-    minzoom: 10,
-    paint: {
-      'circle-radius': ['interpolate', ['linear'], ['get', 'score'], 0, 4, 1, 12],
-      'circle-color': [
-        'case',
-        ['>=', ['get', 'score'], 0.8], '#22c55e',
-        ['>=', ['get', 'score'], 0.6], '#eab308',
-        '#ef4444'
-      ],
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#ffffff',
-      'circle-opacity': 0.8
-    }
-  };
-
-  // Journey route layer
-  const routeLayer = {
-    id: 'journey-route',
-    type: 'line',
-    source: 'journey-route',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    paint: {
-      'line-color': '#3b82f6',
-      'line-width': 3,
-      'line-opacity': 0.8
-    }
-  };
-
-  // Boundary layer
-  const boundaryLayer = {
-    id: 'maritime-boundaries',
-    type: 'line',
-    source: 'boundaries',
-    paint: {
-      'line-color': '#dc2626',
-      'line-width': 2,
-      'line-dasharray': [2, 2],
-      'line-opacity': 0.8
-    }
-  };
 
   const getScoreColor = (score) => {
     if (score >= 0.8) return 'bg-green-100 text-green-800';
@@ -170,24 +43,51 @@ const MapComponent = ({
     return 'Poor';
   };
 
-  const handleMapClick = (event) => {
-    const features = mapRef.current?.queryRenderedFeatures(event.point);
-    const fishingZoneFeature = features?.find(f => f.layer.id === 'fishing-zones-points');
-    
-    if (fishingZoneFeature) {
-      const zoneIndex = fishingZoneFeature.properties.id;
-      setSelectedZone(fishingZones[zoneIndex]);
-    } else {
-      setSelectedZone(null);
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          };
+          setUserLocation(newLocation);
+          if (onLocationChange) {
+            onLocationChange({ longitude: newLocation.lon, latitude: newLocation.lat });
+          }
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+        }
+      );
     }
   };
 
-  const handleGeolocate = (e) => {
-    const { longitude, latitude } = e.coords;
-    setUserLocation({ lon: longitude, lat: latitude });
-    if (onLocationChange) {
-      onLocationChange({ longitude, latitude });
+  // Create Mapbox URL for the static map
+  const createMapboxStaticUrl = () => {
+    const baseUrl = 'https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static';
+    const token = 'pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw';
+    
+    let overlays = [];
+    
+    // Add fishing zones as pins
+    fishingZones.forEach((zone, index) => {
+      const color = zone.score >= 0.8 ? 'green' : zone.score >= 0.6 ? 'yellow' : 'red';
+      overlays.push(`pin-s-${index + 1}+${color}(${zone.lon},${zone.lat})`);
+    });
+    
+    // Add current location
+    if (currentLocation) {
+      overlays.push(`pin-l-marker+blue(${currentLocation.lon},${currentLocation.lat})`);
     }
+    
+    const center = currentLocation ? 
+      `${currentLocation.lon},${currentLocation.lat}` : 
+      `${initialViewState.longitude},${initialViewState.latitude}`;
+    
+    const overlayString = overlays.length > 0 ? overlays.join(',') + '/' : '';
+    
+    return `${baseUrl}/${overlayString}${center},${initialViewState.zoom}/${800}x${height}?access_token=${token}`;
   };
 
   return (
