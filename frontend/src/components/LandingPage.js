@@ -33,20 +33,68 @@ const LandingPage = ({ onLogin }) => {
     phone: ''
   });
 
-  const handleAuthSubmit = (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     
-    // Simulate authentication
-    const userData = {
-      id: Date.now(),
-      name: formData.name || formData.email.split('@')[0],
-      email: formData.email,
-      role: formData.role,
-      token: 'demo_token_' + Date.now()
-    };
-    
-    onLogin(userData);
-    setShowAuthModal(false);
+    try {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      
+      if (authMode === 'register') {
+        // Registration API call
+        const response = await fetch(`${backendUrl}/api/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            full_name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            phone: formData.phone,
+            role: formData.role
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Store token and user data
+          localStorage.setItem('auth_token', data.access_token);
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          onLogin(data.user);
+          setShowAuthModal(false);
+        } else {
+          const error = await response.json();
+          alert(`Registration failed: ${error.detail || 'Unknown error'}`);
+        }
+      } else {
+        // Login API call
+        const response = await fetch(`${backendUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Store token and user data
+          localStorage.setItem('auth_token', data.access_token);
+          localStorage.setItem('user_data', JSON.stringify(data.user));
+          onLogin(data.user);
+          setShowAuthModal(false);
+        } else {
+          const error = await response.json();
+          alert(`Login failed: ${error.detail || 'Invalid credentials'}`);
+        }
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      alert('Network error. Please try again.');
+    }
   };
 
   const handleInputChange = (field, value) => {
