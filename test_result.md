@@ -311,13 +311,16 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/src/components/LandingPage.js"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ AUTHENTICATION SYSTEM FRONTEND ISSUE: Landing page loads correctly with auth modal, but login form submission fails. Modal opens properly with Login/Register tabs, form fields accept input (testdemo@example.com, testpassword123), but after clicking Sign In button, user remains on landing page instead of redirecting to dashboard. No error messages displayed. Backend authentication APIs work (confirmed in previous tests), but frontend login flow has integration issues. Workaround: localStorage simulation works, suggesting frontend-backend auth integration problem."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL AUTHENTICATION FRONTEND ISSUE CONFIRMED (REVIEW REQUEST TESTING): Login API returns 401 Unauthorized error when attempting authentication with testdemo@example.com/testpassword123. Console shows 'Failed to load resource: the server responded with a status of 401' for /api/auth/login endpoint. Frontend form submission works correctly, but backend rejects credentials. However, localStorage workaround (setting bluenet_user manually) successfully loads dashboard, confirming frontend authentication flow logic is correct. ISSUE: Either test credentials are invalid, or backend authentication endpoint has issues with the provided test account. Backend APIs work perfectly when bypassing frontend auth. RECOMMENDATION: Verify test account exists in database or fix backend authentication validation."
 
 metadata:
   created_by: "main_agent"
