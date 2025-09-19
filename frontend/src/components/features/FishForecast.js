@@ -18,6 +18,7 @@ import {
   Target
 } from 'lucide-react';
 import { apiService } from '../../utils/api';
+import FishingZonesMap from '../maps/FishingZonesMap';
 
 const FishForecast = () => {
   const [forecastData, setForecastData] = useState(null);
