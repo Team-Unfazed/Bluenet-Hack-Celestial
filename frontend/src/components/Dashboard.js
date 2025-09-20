@@ -33,6 +33,7 @@ import MaritimeSafety from './features/MaritimeSafety';
 
 import { useApp } from '../contexts/AppContext';
 import { apiService } from '../utils/api';
+import { t } from '../utils/translations';
 
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -108,21 +109,21 @@ const Dashboard = () => {
 
   const tabs = currentUser?.role === 'policymaker' 
     ? [
-        { id: 'overview', label: 'Overview', icon: BarChart3 },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-        { id: 'compliance', label: 'Compliance', icon: AlertTriangle },
-        { id: 'assistant', label: 'AI Assistant', icon: MessageSquare },
-        { id: 'offline', label: 'Offline Data', icon: Database }
+        { id: 'overview', label: t('overview'), icon: BarChart3 },
+        { id: 'analytics', label: t('policyAnalytics'), icon: BarChart3 },
+        { id: 'compliance', label: t('complianceMonitoring'), icon: AlertTriangle },
+        { id: 'assistant', label: t('aiAssistant'), icon: MessageSquare },
+        { id: 'offline', label: t('offlineData'), icon: Database }
       ]
     : [
-        { id: 'overview', label: 'Overview', icon: BarChart3 },
-        { id: 'maritime', label: 'Maritime Safety', icon: Shield },
-        { id: 'forecast', label: 'Fish Forecast', icon: Fish },
-        { id: 'market', label: 'Market Prices', icon: TrendingUp },
-        { id: 'journey', label: 'Journey Track', icon: NavigationIcon },
-        { id: 'catch', label: 'Catch Logger', icon: Camera },
-        { id: 'assistant', label: 'AI Assistant', icon: MessageSquare },
-        { id: 'offline', label: 'Offline Data', icon: Database }
+        { id: 'overview', label: t('overview'), icon: BarChart3 },
+        { id: 'maritime', label: t('maritimeSafety'), icon: Shield },
+        { id: 'forecast', label: t('fishForecast'), icon: Fish },
+        { id: 'market', label: t('marketPrices'), icon: TrendingUp },
+        { id: 'journey', label: t('journeyTrack'), icon: NavigationIcon },
+        { id: 'catch', label: t('catchLogger'), icon: Camera },
+        { id: 'assistant', label: t('aiAssistant'), icon: MessageSquare },
+        { id: 'offline', label: t('offlineData'), icon: Database }
       ];
 
   if (dashboardData.loading) {
@@ -130,7 +131,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <p className="text-gray-600">{t('loading')} {t('dashboard').toLowerCase()}...</p>
         </div>
       </div>
     );
@@ -142,12 +143,12 @@ const Dashboard = () => {
         {/* Page header */}
         <div className="mb-4 sm:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-            Welcome back, {currentUser?.name}!
+            {t('welcomeBack') || 'Welcome back'}, {currentUser?.name}!
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mt-2">
             {currentUser?.role === 'policymaker' 
-              ? 'Monitor fishing activities and compliance across all regions'
-              : 'Your smart fishing assistant powered by AI technology'
+              ? t('monitorFishingActivities') || 'Monitor fishing activities and compliance across all regions'
+              : t('smartFishingAssistant') || 'Your smart fishing assistant powered by AI technology'
             }
           </p>
         </div>

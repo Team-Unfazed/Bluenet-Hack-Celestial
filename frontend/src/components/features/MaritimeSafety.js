@@ -21,6 +21,10 @@ import {
   Target
 } from 'lucide-react';
 import MarineMapComponent from '../maps/MarineMapComponent';
+import GoogleMarineMap from '../maps/GoogleMarineMap';
+import LeafletMarineMap from '../maps/LeafletMarineMap';
+import FreeMarineMap from '../maps/FreeMarineMap';
+import MapComponent from '../maps/MapComponent';
 
 const MaritimeSafety = () => {
   const [location, setLocation] = useState(null);
@@ -32,6 +36,7 @@ const MaritimeSafety = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [trafficDensity, setTrafficDensity] = useState('high');
+  const [mapType, setMapType] = useState('journey'); // 'journey', 'free', 'leaflet', 'google', 'custom'
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -56,12 +61,21 @@ const MaritimeSafety = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const loc = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          };
-          setLocation(loc);
-          fetchEnvironmentalData(loc.lat, loc.lon);
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          
+          // Validate coordinates
+          if (isNaN(lat) || isNaN(lon) || lat === null || lon === null || 
+              lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+            console.warn('Invalid coordinates received, using fallback');
+            const loc = { lat: 19.0760, lon: 72.8777 };
+            setLocation(loc);
+            fetchEnvironmentalData(loc.lat, loc.lon);
+          } else {
+            const loc = { lat, lon };
+            setLocation(loc);
+            fetchEnvironmentalData(loc.lat, loc.lon);
+          }
         },
         (error) => {
           console.error('Error getting location:', error);
@@ -210,7 +224,49 @@ const MaritimeSafety = () => {
   };
 
   const generateMockVessels = (lat, lon) => {
-    const vesselTypes = ['Cargo', 'Tanker', 'Fishing', 'Passenger', 'Tug', 'Pilot', 'Container', 'Bulk Carrier', 'RoRo', 'Cruise'];
+    const vesselTypes = [
+      { 
+        type: 'Cargo', 
+        names: ['MV Mumbai Express', 'MV Arabian Sea', 'MV Indian Ocean', 'MV Bay of Bengal', 'MV Lakshadweep', 'MV Gateway Express', 'MV Coastal Carrier', 'MV Mumbai Trader'],
+        speeds: [8, 12, 15, 10, 14, 9, 11, 13]
+      },
+      { 
+        type: 'Tanker', 
+        names: ['MT Oil Pioneer', 'MT Crude Carrier', 'MT Petroleum Star', 'MT Fuel Master', 'MT Energy Voyager', 'MT Mumbai Refinery', 'MT Arabian Oil', 'MT Coastal Tanker'],
+        speeds: [6, 8, 10, 7, 9, 5, 8, 7]
+      },
+      { 
+        type: 'Fishing', 
+        names: ['FV Sea Harvest', 'FV Ocean Bounty', 'FV Fish Master', 'FV Deep Sea', 'FV Coastal Catcher', 'FV Mumbai Fisher', 'FV Arabian Catch', 'FV Bay Fisher'],
+        speeds: [4, 6, 8, 5, 7, 3, 6, 5]
+      },
+      { 
+        type: 'Passenger', 
+        names: ['MV Ferry Express', 'MV Coastal Cruiser', 'MV Island Hopper', 'MV Bay Ferry', 'MV Harbor Shuttle', 'MV Mumbai Ferry', 'MV Gateway Cruiser', 'MV Port Ferry'],
+        speeds: [10, 12, 8, 9, 11, 7, 10, 9]
+      },
+      { 
+        type: 'Container', 
+        names: ['MV Container Express', 'MV Mumbai Port', 'MV Gateway Container', 'MV Arabian Cargo', 'MV Coastal Container', 'MV Bay Container', 'MV Port Express'],
+        speeds: [12, 14, 16, 11, 13, 10, 15]
+      },
+      { 
+        type: 'Bulk Carrier', 
+        names: ['MV Bulk Pioneer', 'MV Mumbai Bulk', 'MV Arabian Bulk', 'MV Coastal Bulk', 'MV Bay Carrier', 'MV Port Bulk', 'MV Gateway Bulk'],
+        speeds: [9, 11, 13, 8, 10, 7, 12]
+      },
+      { 
+        type: 'Tug', 
+        names: ['MV Mumbai Tug', 'MV Port Tug', 'MV Harbor Tug', 'MV Bay Tug', 'MV Coastal Tug', 'MV Gateway Tug', 'MV Arabian Tug'],
+        speeds: [6, 8, 10, 5, 7, 4, 9]
+      },
+      { 
+        type: 'Pilot', 
+        names: ['MV Pilot Boat 1', 'MV Pilot Boat 2', 'MV Mumbai Pilot', 'MV Port Pilot', 'MV Harbor Pilot', 'MV Bay Pilot', 'MV Coastal Pilot'],
+        speeds: [8, 10, 12, 7, 9, 6, 11]
+      }
+    ];
+    
     const vessels = [];
     
     // Generate dense marine traffic like the image - adjust based on density setting
@@ -225,9 +281,18 @@ const MaritimeSafety = () => {
       const vesselLat = lat + (distance / 111) * Math.cos(angle);
       const vesselLon = lon + (distance / (111 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
       
-      const vesselType = vesselTypes[Math.floor(Math.random() * vesselTypes.length)];
-      const speed = Math.random() * 20; // 0-20 knots
-      const course = Math.random() * 360; // 0-360 degrees
+      // Validate generated coordinates
+      if (isNaN(vesselLat) || isNaN(vesselLon) || 
+          vesselLat < -90 || vesselLat > 90 || 
+          vesselLon < -180 || vesselLon > 180) {
+        console.warn(`Invalid vessel coordinates generated: ${vesselLat}, ${vesselLon}`);
+        continue; // Skip this vessel
+      }
+      
+      const vesselTypeData = vesselTypes[Math.floor(Math.random() * vesselTypes.length)];
+      const vesselType = vesselTypeData.type;
+      const vesselName = vesselTypeData.names[Math.floor(Math.random() * vesselTypeData.names.length)];
+      const baseSpeed = vesselTypeData.speeds[Math.floor(Math.random() * vesselTypeData.speeds.length)];
       
       // More realistic alert levels based on distance
       let alertLevel = 'SAFE';
@@ -236,16 +301,17 @@ const MaritimeSafety = () => {
       
       // Add some vessels that are stationary (at anchor)
       const isStationary = Math.random() < 0.2; // 20% chance
-      const actualSpeed = isStationary ? Math.random() * 0.5 : speed;
+      const actualSpeed = isStationary ? Math.random() * 0.5 : baseSpeed + (Math.random() * 4 - 2);
+      const course = Math.random() * 360; // 0-360 degrees
       
       vessels.push({
         id: `vessel_${i + 1}`,
-        name: `${vesselType} ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${Math.floor(Math.random() * 9999)}`,
+        name: vesselName,
         mmsi: Math.floor(100000000 + Math.random() * 900000000),
         type: vesselType,
         lat: vesselLat,
         lon: vesselLon,
-        speed_knots: actualSpeed,
+        speed_knots: Math.max(0, actualSpeed),
         course_degrees: course,
         distance_km: distance,
         alert_level: {
@@ -411,23 +477,41 @@ const MaritimeSafety = () => {
     </div>
   );
 
-  // Safety check - ensure we have basic data before rendering
-  if (!safetyReport || !nearbyVessels || !dangerAnalysis) {
-    return (
-      <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 max-w-full overflow-hidden">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertTriangle className="w-8 h-8 mx-auto mb-4 text-yellow-600" />
-            <p className="text-gray-600">Initializing maritime data...</p>
-            <Button onClick={() => getCurrentLocation()} className="mt-4">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Initialize with default data if not available
+  const safeSafetyReport = safetyReport || {
+    status: 'loading',
+    message: 'Loading maritime safety data...',
+    risk_level: 'low',
+    recommendations: [],
+    overall_safety: {
+      status: 'SAFE',
+      message: 'Loading safety data...'
+    },
+    vessel_tracking: {
+      vessels_found: 0,
+      collision_alerts: 0,
+      closest_vessel_km: 0,
+      vessels: []
+    },
+    api_status: 'offline',
+    source: 'simulated'
+  };
+  
+  const safeNearbyVessels = nearbyVessels || [];
+  
+  const safeDangerAnalysis = dangerAnalysis || {
+    environmental_data: {
+      sea_surface_temp_c: 0,
+      wind_speed_ms: 0,
+      wave_height_m: 0,
+      visibility_km: 0
+    },
+    risk_factors: [],
+    recommendations: [],
+    risk_analysis: {
+      overall_risk_level: 'LOW'
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 max-w-full overflow-hidden">
@@ -458,6 +542,31 @@ const MaritimeSafety = () => {
             <span className="hidden sm:inline">Auto: {autoRefresh ? 'ON' : 'OFF'}</span>
             <span className="sm:hidden">{autoRefresh ? 'ON' : 'OFF'}</span>
           </Button>
+          <Button 
+            onClick={() => {
+              const mapTypes = ['journey', 'free', 'leaflet', 'google', 'custom'];
+              const currentIndex = mapTypes.indexOf(mapType);
+              const nextIndex = (currentIndex + 1) % mapTypes.length;
+              setMapType(mapTypes[nextIndex]);
+            }}
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto text-xs sm:text-sm"
+          >
+            <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">
+              {mapType === 'journey' ? 'Journey Map' : 
+               mapType === 'free' ? 'Free Map' : 
+               mapType === 'leaflet' ? 'Leaflet Map' : 
+               mapType === 'google' ? 'Google Maps' : 'Custom Map'}
+            </span>
+            <span className="sm:hidden">
+              {mapType === 'journey' ? 'Journey' : 
+               mapType === 'free' ? 'Free' : 
+               mapType === 'leaflet' ? 'Leaflet' : 
+               mapType === 'google' ? 'Google' : 'Custom'}
+            </span>
+          </Button>
           <select 
             value={trafficDensity} 
             onChange={(e) => setTrafficDensity(e.target.value)}
@@ -471,39 +580,39 @@ const MaritimeSafety = () => {
       </div>
 
       {/* Overall Safety Status */}
-      {safetyReport && (
+      {safeSafetyReport && (
         <Alert className={`border-2 ${
-          safetyReport.overall_safety?.status === 'CRITICAL' ? 'border-red-500 bg-red-50' :
-          safetyReport.overall_safety?.status === 'WARNING' ? 'border-orange-500 bg-orange-50' :
+          safeSafetyReport.overall_safety?.status === 'CRITICAL' ? 'border-red-500 bg-red-50' :
+          safeSafetyReport.overall_safety?.status === 'WARNING' ? 'border-orange-500 bg-orange-50' :
           'border-green-500 bg-green-50'
         }`}>
           <AlertTriangle className={`h-4 w-4 ${
-            safetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-600' :
-            safetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-600' :
+            safeSafetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-600' :
+            safeSafetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-600' :
             'text-green-600'
           }`} />
           <AlertDescription className={`${
-            safetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-800' :
-            safetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-800' :
+            safeSafetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-800' :
+            safeSafetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-800' :
             'text-green-800'
           }`}>
-            <strong>{safetyReport.overall_safety?.message || 'Safety status unavailable'}</strong>
+            <strong>{safeSafetyReport.overall_safety?.message || 'Safety status unavailable'}</strong>
             <br />
             <span className="text-sm">
-              Vessels nearby: {safetyReport.vessel_tracking?.vessels_found || 0} | 
-              Collision alerts: {safetyReport.vessel_tracking?.collision_alerts || 0} | 
-              Closest vessel: {safetyReport.vessel_tracking?.closest_vessel_km?.toFixed(2) || '0.00'} km
+              Vessels nearby: {safeSafetyReport?.vessel_tracking?.vessels_found || 0} | 
+              Collision alerts: {safeSafetyReport?.vessel_tracking?.collision_alerts || 0} | 
+              Closest vessel: {safeSafetyReport?.vessel_tracking?.closest_vessel_km?.toFixed(2) || '0.00'} km
             </span>
-            {safetyReport.api_status && (
+            {safeSafetyReport.api_status && (
               <div className="mt-2 text-xs">
                 <span className={`px-2 py-1 rounded ${
-                  safetyReport.api_status === 'online' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  safeSafetyReport.api_status === 'online' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {safetyReport.api_status === 'online' ? '🟢 Live MarineTraffic Data' : '🟡 Fallback Data'}
+                  {safeSafetyReport.api_status === 'online' ? '🟢 Live MarineTraffic Data' : '🟡 Fallback Data'}
                 </span>
-                {safetyReport.source && (
+                {safeSafetyReport.source && (
                   <span className="ml-2 text-gray-600">
-                    Source: {safetyReport.source === 'marine_traffic_api' ? 'MarineTraffic API' : 'Simulated'}
+                    Source: {safeSafetyReport.source === 'marine_traffic_api' ? 'MarineTraffic API' : 'Simulated'}
                   </span>
                 )}
               </div>
@@ -550,7 +659,7 @@ const MaritimeSafety = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Nearby Vessels</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      {safetyReport?.vessel_tracking.vessels_found || 0}
+                      {safeSafetyReport?.vessel_tracking?.vessels_found || 0}
                     </p>
                   </div>
                   <Ship className="w-8 h-8 text-blue-600" />
@@ -564,7 +673,7 @@ const MaritimeSafety = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Collision Alerts</p>
                     <p className="text-2xl font-bold text-red-600">
-                      {safetyReport?.vessel_tracking.collision_alerts || 0}
+                      {safeSafetyReport?.vessel_tracking?.collision_alerts || 0}
                     </p>
                   </div>
                   <AlertTriangle className="w-8 h-8 text-red-600" />
@@ -578,7 +687,7 @@ const MaritimeSafety = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Closest Vessel</p>
                     <p className="text-2xl font-bold text-orange-600">
-                      {safetyReport?.vessel_tracking.closest_vessel_km?.toFixed(2) || '0.00'} km
+                      {safeSafetyReport?.vessel_tracking?.closest_vessel_km?.toFixed(2) || '0.00'} km
                     </p>
                   </div>
                   <Target className="w-8 h-8 text-orange-600" />
@@ -601,33 +710,155 @@ const MaritimeSafety = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {location && (
-                <MarineMapComponent
-                  initialViewState={{
-                    longitude: location?.lon || 0,
-                    latitude: location?.lat || 0,
-                    zoom: 8
-                  }}
-                  height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
-                  currentLocation={location}
-                  fishingZones={nearbyVessels.map(vessel => ({
-                    lat: vessel.lat,
-                    lon: vessel.lon,
-                    score: vessel.alert_level.level === 'DANGER' ? 0.2 : 
-                           vessel.alert_level.level === 'WARNING' ? 0.5 : 0.8,
-                    location_name: vessel.name,
-                    vessel_type: vessel.type,
-                    speed_knots: vessel.speed_knots,
-                    course_degrees: vessel.course_degrees,
-                    distance_km: vessel.distance_km,
-                    alert_level: vessel.alert_level.level,
-                    marker_color: vessel.marker_color,
-                    marker_shape: vessel.marker_shape,
-                    size: vessel.size,
-                    mmsi: vessel.mmsi
-                  }))}
-                  mapStyle="marine"
-                />
+              {location && location.lat && location.lon && !isNaN(location.lat) && !isNaN(location.lon) && (
+                mapType === 'journey' ? (
+                  <MapComponent
+                    initialViewState={{
+                      longitude: location?.lon || 72.8777,
+                      latitude: location?.lat || 19.0760,
+                      zoom: 10
+                    }}
+                    height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
+                    currentLocation={location}
+                    fishingZones={safeNearbyVessels
+                      .filter(vessel => 
+                        vessel.lat && vessel.lon && 
+                        !isNaN(vessel.lat) && !isNaN(vessel.lon) &&
+                        vessel.lat >= -90 && vessel.lat <= 90 &&
+                        vessel.lon >= -180 && vessel.lon <= 180
+                      )
+                      .map(vessel => ({
+                        lat: vessel.lat,
+                        lon: vessel.lon,
+                        score: vessel.alert_level.level === 'DANGER' ? 0.2 : 
+                               vessel.alert_level.level === 'WARNING' ? 0.5 : 0.8,
+                        location_name: vessel.name,
+                        vessel_type: vessel.type,
+                        speed_knots: vessel.speed_knots,
+                        course_degrees: vessel.course_degrees,
+                        distance_km: vessel.distance_km,
+                        alert_level: vessel.alert_level.level,
+                        marker_color: vessel.marker_color,
+                        marker_shape: vessel.marker_shape,
+                        size: vessel.size,
+                        mmsi: vessel.mmsi
+                      }))}
+                    boundaries={[
+                      {
+                        name: 'Indian Territorial Waters - 12 NM',
+                        type: 'territorial',
+                        geometry: {
+                          type: 'LineString',
+                          coordinates: [
+                            [72.2, 18.7],
+                            [73.5, 18.7],
+                            [73.5, 19.5],
+                            [72.2, 19.5],
+                            [72.2, 18.7]
+                          ]
+                        }
+                      },
+                      {
+                        name: 'Restricted Fishing Zone',
+                        type: 'restricted',
+                        geometry: {
+                          type: 'LineString',
+                          coordinates: [
+                            [72.4, 18.9],
+                            [73.2, 18.9],
+                            [73.2, 19.3],
+                            [72.4, 19.3],
+                            [72.4, 18.9]
+                          ]
+                        }
+                      }
+                    ]}
+                    alerts={safeNearbyVessels
+                      .filter(v => 
+                        v.alert_level.level === 'DANGER' &&
+                        v.lat && v.lon && 
+                        !isNaN(v.lat) && !isNaN(v.lon) &&
+                        v.lat >= -90 && v.lat <= 90 &&
+                        v.lon >= -180 && v.lon <= 180
+                      )
+                      .map(vessel => ({
+                        location: { lat: vessel.lat, lon: vessel.lon },
+                        type: 'collision_risk',
+                        message: `Collision risk with ${vessel.name}`
+                      }))}
+                    mapStyle="mapbox://styles/mapbox/navigation-day-v1"
+                    showControls={true}
+                  />
+                ) : mapType === 'free' ? (
+                  <FreeMarineMap
+                    initialViewState={{
+                      longitude: location?.lon || 0,
+                      latitude: location?.lat || 0,
+                      zoom: 8
+                    }}
+                    height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
+                    currentLocation={location}
+                    vessels={safeNearbyVessels}
+                    onLocationChange={setLocation}
+                    showControls={true}
+                    mapStyle="marine"
+                  />
+                ) : mapType === 'leaflet' ? (
+                  <LeafletMarineMap
+                    initialViewState={{
+                      longitude: location?.lon || 0,
+                      latitude: location?.lat || 0,
+                      zoom: 8
+                    }}
+                    height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
+                    currentLocation={location}
+                    vessels={safeNearbyVessels}
+                    onLocationChange={setLocation}
+                    showControls={true}
+                    mapStyle="marine"
+                  />
+                ) : mapType === 'google' ? (
+                  <GoogleMarineMap
+                    initialViewState={{
+                      longitude: location?.lon || 0,
+                      latitude: location?.lat || 0,
+                      zoom: 8
+                    }}
+                    height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
+                    currentLocation={location}
+                    vessels={safeNearbyVessels}
+                    onLocationChange={setLocation}
+                    showControls={true}
+                    mapStyle="marine"
+                  />
+                ) : (
+                  <MarineMapComponent
+                    initialViewState={{
+                      longitude: location?.lon || 0,
+                      latitude: location?.lat || 0,
+                      zoom: 8
+                    }}
+                    height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
+                    currentLocation={location}
+                    fishingZones={safeNearbyVessels.map(vessel => ({
+                      lat: vessel.lat,
+                      lon: vessel.lon,
+                      score: vessel.alert_level.level === 'DANGER' ? 0.2 : 
+                             vessel.alert_level.level === 'WARNING' ? 0.5 : 0.8,
+                      location_name: vessel.name,
+                      vessel_type: vessel.type,
+                      speed_knots: vessel.speed_knots,
+                      course_degrees: vessel.course_degrees,
+                      distance_km: vessel.distance_km,
+                      alert_level: vessel.alert_level.level,
+                      marker_color: vessel.marker_color,
+                      marker_shape: vessel.marker_shape,
+                      size: vessel.size,
+                      mmsi: vessel.mmsi
+                    }))}
+                    mapStyle="marine"
+                  />
+                )
               )}
             </CardContent>
           </Card>
@@ -798,7 +1029,7 @@ const MaritimeSafety = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {nearbyVessels.filter(v => v.alert_level.level !== 'SAFE').map((vessel, index) => (
+                {safeNearbyVessels.filter(v => v.alert_level.level !== 'SAFE').map((vessel, index) => (
                   <Alert key={vessel.id} className={
                     vessel.alert_level.level === 'DANGER' ? 'border-red-500 bg-red-50' :
                     'border-orange-500 bg-orange-50'
@@ -820,7 +1051,7 @@ const MaritimeSafety = () => {
                   </Alert>
                 ))}
                 
-                {nearbyVessels.filter(v => v.alert_level.level !== 'SAFE').length === 0 && (
+                {safeNearbyVessels.filter(v => v.alert_level.level !== 'SAFE').length === 0 && (
                   <Alert className="border-green-500 bg-green-50">
                     <Shield className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">

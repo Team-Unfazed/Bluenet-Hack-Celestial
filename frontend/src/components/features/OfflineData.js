@@ -21,6 +21,7 @@ import {
 
 const OfflineData = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [networkCheckInterval, setNetworkCheckInterval] = useState(null);
   const [offlineData, setOfflineData] = useState({
     fishForecast: [],
     mandiPrices: [],
@@ -32,16 +33,69 @@ const OfflineData = () => {
   const [syncProgress, setSyncProgress] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [reportFormat, setReportFormat] = useState('text'); // 'text' or 'json'
+  const [reportFormat, setReportFormat] = useState('text');
+
+  // Enhanced network status checking
+  const checkNetworkStatus = async () => {
+    console.log('Checking network status...');
+    
+    // First check navigator.onLine
+    if (!navigator.onLine) {
+      console.log('Navigator reports offline');
+      setIsOnline(false);
+      return;
+    }
+
+    try {
+      // Try to reach the backend server
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+      const response = await fetch(`${backendUrl}/health`, { 
+        method: 'GET',
+        cache: 'no-cache',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        console.log('Backend reachable - Online');
+        setIsOnline(true);
+      } else {
+        console.log('Backend responded but not OK - Offline');
+        setIsOnline(false);
+      }
+    } catch (error) {
+      console.log('Backend not reachable - Offline:', error.message);
+      setIsOnline(false);
+    }
+  };
 
   useEffect(() => {
+    // Initial network check
+    checkNetworkStatus();
+
     // Listen for online/offline events
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      console.log('Browser online event detected');
+      setIsOnline(true);
+    };
     
+    const handleOffline = () => {
+      console.log('Browser offline event detected');
+      setIsOnline(false);
+    };
+
+    // Add event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
+    // Periodic network check every 10 seconds
+    const networkInterval = setInterval(checkNetworkStatus, 10000);
+    setNetworkCheckInterval(networkInterval);
+
     // Load stored offline data
     loadOfflineData();
     
@@ -51,6 +105,7 @@ const OfflineData = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (networkInterval) clearInterval(networkInterval);
       clearInterval(syncInterval);
     };
   }, []);
@@ -439,13 +494,49 @@ const OfflineData = () => {
               Online
             </Badge>
           ) : (
-            <Badge variant="destructive">
+            <Badge variant="destructive" className="bg-red-100 text-red-800">
               <WifiOff className="w-4 h-4 mr-1" />
               Offline
             </Badge>
           )}
+          <Button 
+            onClick={checkNetworkStatus} 
+            variant="outline" 
+            size="sm"
+            className="ml-2"
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Test Connection
+          </Button>
+          <Button 
+            onClick={() => {
+              const newStatus = !isOnline;
+              setIsOnline(newStatus);
+              console.log(`Manually toggled to: ${newStatus ? 'Online' : 'Offline'}`);
+            }} 
+            variant={isOnline ? "destructive" : "default"}
+            size="sm"
+            className="ml-1"
+          >
+            {isOnline ? 'Go Offline' : 'Go Online'}
+          </Button>
         </div>
       </div>
+
+      {/* Offline Status Alert */}
+      {!isOnline && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <WifiOff className="w-5 h-5 text-red-600 mr-3" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">You're currently offline</h3>
+              <p className="text-sm text-red-600 mt-1">
+                Some features may be limited. Data will sync automatically when you're back online.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Sync Status */}
@@ -461,6 +552,15 @@ const OfflineData = () => {
               <div className="flex justify-between text-sm mb-2">
                 <span>Last Sync:</span>
                 <span>{lastSync ? lastSync.toLocaleString() : 'Never'}</span>
+              </div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Status:</span>
+                <div className="flex items-center">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <span className={isOnline ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
               </div>
               {syncProgress > 0 && syncProgress < 100 && (
                 <Progress value={syncProgress} className="w-full" />

@@ -1,15 +1,33 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getCurrentLanguage, setCurrentLanguage } from '../utils/translations';
 
 const AppContext = createContext({
   currentUser: null,
   onLogin: () => {},
   onLogout: () => {},
   backendUrl: '',
+  currentLanguage: 'en',
+  setLanguage: () => {},
 });
 
 export const AppProvider = ({ children, value }) => {
+  const [currentLanguage, setCurrentLanguageState] = useState(getCurrentLanguage());
+
+  const setLanguage = (language) => {
+    setCurrentLanguage(language);
+    setCurrentLanguageState(language);
+    // Force re-render by updating a dummy state
+    window.location.reload();
+  };
+
+  const contextValue = {
+    ...value,
+    currentLanguage,
+    setLanguage,
+  };
+
   return (
-    <AppContext.Provider value={value}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

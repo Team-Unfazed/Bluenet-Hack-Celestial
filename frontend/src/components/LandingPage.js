@@ -106,47 +106,47 @@ const LandingPage = ({ onLogin }) => {
   const features = [
     {
       icon: Fish,
-      title: "AI Fish Forecasting",
-      description: "Smart predictions using environmental data to find the best fishing spots with 72% accuracy.",
+      title: t('aiFishForecasting'),
+      description: t('smartPredictions'),
       color: "text-sky-600"
     },
     {
       icon: TrendingUp,
-      title: "Market Price Intelligence",
-      description: "Real-time mandi prices with ML-powered recommendations for maximum profit.",
+      title: t('marketPriceIntelligence'),
+      description: t('realtimeMandiPrices'),
       color: "text-teal-600"
     },
     {
       icon: Shield,
-      title: "Compliance & Safety",
-      description: "Automated catch logging with species detection and regulation compliance monitoring.",
+      title: t('complianceSafety'),
+      description: t('automatedCatchLogging'),
       color: "text-indigo-600"
     },
     {
       icon: AlertTriangle,
-      title: "Disaster Alerts",
-      description: "Real-time weather warnings and geofencing for maritime boundary safety.",
+      title: t('disasterAlerts'),
+      description: t('realtimeWeatherWarnings'),
       color: "text-orange-600"
     },
     {
       icon: Navigation,
-      title: "Journey Tracking",
-      description: "Live GPS tracking with fuel efficiency monitoring and boundary alerts.",
+      title: t('journeyTracking'),
+      description: t('liveGPSTracking'),
       color: "text-green-600"
     },
     {
       icon: MessageSquare,
-      title: "AI Assistant",
-      description: "Expert guidance on regulations, forecasts, and market insights powered by RAG technology.",
+      title: t('aiAssistant'),
+      description: t('expertGuidance'),
       color: "text-purple-600"
     }
   ];
 
   const stats = [
-    { value: "15,000+", label: "Active Fishermen", icon: Users },
-    { value: "₹2.5Cr+", label: "Savings Generated", icon: TrendingUp },
-    { value: "350+", label: "Ports Connected", icon: MapPin },
-    { value: "95%", label: "Safety Rate", icon: Shield }
+    { value: "15,000+", label: t('activeFishermen'), icon: Users },
+    { value: "₹2.5Cr+", label: t('savingsGenerated'), icon: TrendingUp },
+    { value: "350+", label: t('locations'), icon: MapPin },
+    { value: "95%", label: t('successRate'), icon: Shield }
   ];
 
   return (
@@ -166,9 +166,9 @@ const LandingPage = ({ onLogin }) => {
             
             <div className="flex items-center gap-4">
               <div className="hidden md:flex items-center gap-8">
-                <a href="#features" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">{t('features') || 'Features'}</a>
-                <a href="#how-it-works" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">How it Works</a>
-                <a href="#contact" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">Contact</a>
+                <a href="#features" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">{t('features')}</a>
+                <a href="#how-it-works" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">{t('howItWorks')}</a>
+                <a href="#contact" className="text-gray-600 hover:text-sky-600 font-medium transition-colors">{t('contact')}</a>
               </div>
               
               <LanguageSelector onLanguageChange={(lang) => console.log('Language changed to:', lang)} />
@@ -177,35 +177,30 @@ const LandingPage = ({ onLogin }) => {
             <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
               <DialogTrigger asChild>
                 <Button className="bg-sky-600 hover:bg-sky-700">
-                  {t('tryDashboard') || 'Get Started'}
-                </Button>
-              </DialogTrigger>
-              <DialogTrigger asChild>
-                <Button className="bg-sky-600 hover:bg-sky-700">
-                  Get Started
+                  {t('tryDashboard')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Welcome to BlueNet</DialogTitle>
+                  <DialogTitle>{t('welcomeToBlueNet')}</DialogTitle>
                   <DialogDescription>
-                    Join thousands of fishermen using smart technology for better catches
+                    {t('joinThousands')}
                   </DialogDescription>
                 </DialogHeader>
                 
                 <Tabs value={authMode} onValueChange={setAuthMode}>
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="login">Login</TabsTrigger>
-                    <TabsTrigger value="register">Register</TabsTrigger>
+                    <TabsTrigger value="login">{t('login')}</TabsTrigger>
+                    <TabsTrigger value="register">{t('register')}</TabsTrigger>
                   </TabsList>
                   
                   <form onSubmit={handleAuthSubmit} className="space-y-4 mt-4">
                     <TabsContent value="register" className="space-y-4 mt-0">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="name">{t('fullName')}</Label>
                         <Input
                           id="name"
-                          placeholder="Enter your full name"
+                          placeholder={t('enterYourFullName')}
                           value={formData.name}
                           onChange={(e) => handleInputChange('name', e.target.value)}
                           required
@@ -213,35 +208,35 @@ const LandingPage = ({ onLogin }) => {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
+                        <Label htmlFor="phone">{t('phoneNumber')}</Label>
                         <Input
                           id="phone"
-                          placeholder="+91 98765 43210"
+                          placeholder={t('enterYourPhone')}
                           value={formData.phone}
                           onChange={(e) => handleInputChange('phone', e.target.value)}
                         />
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="role">Your Role</Label>
+                        <Label htmlFor="role">{t('yourRole')}</Label>
                         <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select your role" />
+                            <SelectValue placeholder={t('selectYourRole')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="fisherman">Fisherman</SelectItem>
-                            <SelectItem value="policymaker">Policymaker</SelectItem>
+                            <SelectItem value="fisherman">{t('fisherman')}</SelectItem>
+                            <SelectItem value="policymaker">{t('policymaker')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </TabsContent>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">{t('email')}</Label>
                       <Input
                         id="email"
                         type="email"
-                        placeholder="fisher@example.com"
+                        placeholder={t('enterYourEmail')}
                         value={formData.email}
                         onChange={(e) => handleInputChange('email', e.target.value)}
                         required
@@ -249,11 +244,11 @@ const LandingPage = ({ onLogin }) => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">{t('password')}</Label>
                       <Input
                         id="password"
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder={t('enterYourPassword')}
                         value={formData.password}
                         onChange={(e) => handleInputChange('password', e.target.value)}
                         required
@@ -261,7 +256,7 @@ const LandingPage = ({ onLogin }) => {
                     </div>
                     
                     <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-700">
-                      {authMode === 'login' ? 'Sign In' : 'Create Account'}
+                      {authMode === 'login' ? t('signIn') : t('createAccount')}
                     </Button>
                   </form>
                 </Tabs>
@@ -273,18 +268,16 @@ const LandingPage = ({ onLogin }) => {
           <div className="px-6 py-24 lg:px-8">
             <div className="mx-auto max-w-4xl text-center">
               <Badge variant="outline" className="mb-8 px-4 py-2 text-sm font-medium border-sky-200 text-sky-700">
-                🌊 Enhancing Coastal Fishing with AI & Technology
+                🌊 {t('enhancingCoastalFishing')}
               </Badge>
               
               <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl mb-6">
-                Fish Smarter. Stay Safer.{' '}
-                <span className="text-sky-600">Earn More.</span>
+                {t('tagline').split('. ')[0]}. {t('tagline').split('. ')[1]}.{' '}
+                <span className="text-sky-600">{t('tagline').split('. ')[2]}</span>
               </h1>
               
               <p className="text-lg leading-8 text-gray-600 mb-12 max-w-2xl mx-auto">
-                BlueNet combines artificial intelligence, real-time data, and local expertise to revolutionize 
-                coastal fishing practices in India. Join thousands of fishermen already using smart technology 
-                for better catches and safer journeys.
+                {t('description')}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -294,11 +287,11 @@ const LandingPage = ({ onLogin }) => {
                   onClick={() => setShowAuthModal(true)}
                 >
                   <Play className="w-5 h-5 mr-2" />
-                  Try the Dashboard
+                  {t('tryDashboard')}
                 </Button>
                 <Button size="lg" variant="outline" className="border-sky-200 text-sky-700 hover:bg-sky-50">
                   <Fish className="w-5 h-5 mr-2" />
-                  Watch Demo
+                  {t('watchDemo')}
                 </Button>
               </div>
             </div>
@@ -328,10 +321,10 @@ const LandingPage = ({ onLogin }) => {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Everything you need for modern fishing
+              {t('everythingYouNeed')}
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Advanced AI-powered tools designed specifically for Indian coastal fishermen and policymakers
+              {t('advancedAITools')}
             </p>
           </div>
           
@@ -362,10 +355,10 @@ const LandingPage = ({ onLogin }) => {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Simple. Smart. Effective.
+              {t('simpleSmartEffective')}
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Get started in three easy steps and transform your fishing operations
+              {t('getStartedInThreeSteps')}
             </p>
           </div>
           
@@ -373,20 +366,20 @@ const LandingPage = ({ onLogin }) => {
             {[
               {
                 step: "01",
-                title: "Create Your Account",
-                description: "Sign up and choose your role - fisherman or policymaker. Complete your profile to get personalized recommendations.",
+                title: t('createYourAccount'),
+                description: t('signUpAndChoose'),
                 icon: Users
               },
               {
                 step: "02", 
-                title: "Access Smart Tools",
-                description: "Use AI-powered forecasting, market insights, journey tracking, and compliance tools designed for your needs.",
+                title: t('accessSmartTools'),
+                description: t('useAIPoweredForecasting'),
                 icon: BarChart3
               },
               {
                 step: "03",
-                title: "Fish Smarter",
-                description: "Follow AI recommendations, track your journeys, stay compliant, and maximize your profits with data-driven decisions.",
+                title: t('fishSmarter'),
+                description: t('followAIRecommendations'),
                 icon: TrendingUp
               }
             ].map((step, index) => (
@@ -417,11 +410,10 @@ const LandingPage = ({ onLogin }) => {
         <div className="px-6 py-24 sm:px-6 sm:py-32 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Ready to revolutionize your fishing operations?
+              {t('readyToRevolutionize')}
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-sky-100">
-              Join thousands of fishermen already using BlueNet to increase their catch, 
-              ensure safety, and maximize profits with smart technology.
+              {t('joinThousandsAlreadyUsing')}
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Button 
@@ -430,10 +422,10 @@ const LandingPage = ({ onLogin }) => {
                 className="bg-white text-sky-600 hover:bg-gray-50"
                 onClick={() => setShowAuthModal(true)}
               >
-                Start Free Trial
+                {t('startFreeTrial')}
               </Button>
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-sky-700">
-                Learn More
+                {t('learnMore')}
               </Button>
             </div>
           </div>
@@ -450,35 +442,34 @@ const LandingPage = ({ onLogin }) => {
                 <span className="text-2xl font-bold text-white">BlueNet</span>
               </div>
               <p className="text-gray-400 max-w-md">
-                Enhancing coastal fishing practices in India through AI-powered technology, 
-                market insights, and safety monitoring for sustainable and profitable fishing operations.
+                {t('enhancingCoastalFishingPractices')}
               </p>
             </div>
             
             <div>
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Features</h3>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">{t('featuresNav')}</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">AI Forecasting</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Market Prices</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Journey Tracking</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Safety Alerts</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('aiForecasting')}</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('marketPricesNav')}</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('journeyTracking')}</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('safetyAlerts')}</a></li>
               </ul>
             </div>
             
             <div>
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Support</h3>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">{t('support')}</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Help Center</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Documentation</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Contact Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-sky-400">Training</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('helpCenter')}</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('documentation')}</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('contactUs')}</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-sky-400">{t('training')}</a></li>
               </ul>
             </div>
           </div>
           
           <div className="mt-8 pt-8 border-t border-gray-800 text-center">
             <p className="text-gray-400 text-sm">
-              © 2025 BlueNet. Built for Indian fishermen with ❤️ and cutting-edge technology.
+              {t('builtForIndianFishermen')}
             </p>
           </div>
         </div>

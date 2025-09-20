@@ -28,6 +28,7 @@ import {
   Bell
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { t } from '../utils/translations';
 
 const Navigation = () => {
   const location = useLocation();
@@ -36,31 +37,31 @@ const Navigation = () => {
 
   const navigationItems = [
     {
-      name: 'Dashboard',
+      name: t('dashboard'),
       href: '/dashboard',
       icon: Home,
       current: location.pathname === '/dashboard'
     },
     {
-      name: 'Fish Forecast',
+      name: t('fishForecast'),
       href: '/dashboard?tab=forecast',
       icon: Fish,
       current: location.search.includes('tab=forecast')
     },
     {
-      name: 'Market Prices',
+      name: t('marketPrices'),
       href: '/dashboard?tab=market',
       icon: TrendingUp,
       current: location.search.includes('tab=market')
     },
     {
-      name: 'Journey Track',
+      name: t('journeyTrack'),
       href: '/dashboard?tab=journey',
       icon: NavigationIcon,
       current: location.search.includes('tab=journey')
     },
     {
-      name: 'AI Assistant',
+      name: t('aiAssistant'),
       href: '/dashboard?tab=assistant',
       icon: MessageSquare,
       current: location.search.includes('tab=assistant')
@@ -71,13 +72,13 @@ const Navigation = () => {
   if (currentUser?.role === 'policymaker') {
     navigationItems.push(
       {
-        name: 'Analytics',
+        name: t('policyAnalytics'),
         href: '/dashboard?tab=analytics',
         icon: BarChart3,
         current: location.search.includes('tab=analytics')
       },
       {
-        name: 'Compliance',
+        name: t('complianceMonitoring'),
         href: '/dashboard?tab=compliance',
         icon: AlertTriangle,
         current: location.search.includes('tab=compliance')
@@ -175,16 +176,16 @@ const Navigation = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                  <span>{t('profile') || 'Profile'}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                  <span>{t('settings') || 'Settings'}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>{t('logout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
