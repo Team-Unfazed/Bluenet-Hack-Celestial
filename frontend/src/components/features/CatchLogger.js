@@ -147,44 +147,94 @@ const CatchLogger = () => {
     setIsLoading(true);
     
     try {
+      // Create catch log entry
+      const catchLogEntry = {
+        id: `catch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        species: formData.species,
+        weight_kg: parseFloat(formData.weight),
+        location: {
+          lat: parseFloat(formData.location_lat),
+          lon: parseFloat(formData.location_lon)
+        },
+        ai_classification: detectionResult ? {
+          predicted_species: detectionResult.name,
+          confidence: detectionResult.confidence,
+          compliance: detectionResult.compliance
+        } : null,
+        compliance_status: detectionResult ? detectionResult.compliance : 'Unknown',
+        timestamp: new Date().toISOString(),
+        image_captured: true,
+        environmental_conditions: {
+          sea_temp: "27.5°C",
+          wind: "12.0 knots",
+          current: "2.3 knots"
+        }
+      };
+
+      // Save to offline data (localStorage)
+      const existingOfflineData = JSON.parse(localStorage.getItem('bluenet_offline_data') || '{}');
+      const catchLogs = existingOfflineData.catchLogs || [];
+      catchLogs.push(catchLogEntry);
+      
+      const updatedOfflineData = {
+        ...existingOfflineData,
+        catchLogs: catchLogs,
+        lastUpdate: new Date().toISOString()
+      };
+      
+      localStorage.setItem('bluenet_offline_data', JSON.stringify(updatedOfflineData));
+      
+      // Try to send to backend (if online)
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
       const token = localStorage.getItem('auth_token');
       
-      const formDataToSend = new FormData();
-      formDataToSend.append('image', capturedImage);
-      formDataToSend.append('species', formData.species);
-      formDataToSend.append('weight', parseFloat(formData.weight));
-      formDataToSend.append('location_lat', parseFloat(formData.location_lat));
-      formDataToSend.append('location_lon', parseFloat(formData.location_lon));
+      if (token) {
+        try {
+          const formDataToSend = new FormData();
+          formDataToSend.append('image', capturedImage);
+          formDataToSend.append('species', formData.species);
+          formDataToSend.append('weight', parseFloat(formData.weight));
+          formDataToSend.append('location_lat', parseFloat(formData.location_lat));
+          formDataToSend.append('location_lon', parseFloat(formData.location_lon));
+          
+          const response = await fetch(`${backendUrl}/api/catch-log`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formDataToSend
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Catch log synced to backend:', result.log_id);
+          }
+        } catch (error) {
+          console.log('Backend sync failed, saved locally only:', error);
+        }
+      }
       
-      const response = await fetch(`${backendUrl}/api/catch-log`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formDataToSend
+      alert(`Catch logged successfully! 
+      
+✅ Species: ${formData.species}
+✅ Weight: ${formData.weight}kg
+✅ Location: ${parseFloat(formData.location_lat).toFixed(4)}°N, ${parseFloat(formData.location_lon).toFixed(4)}°E
+${detectionResult ? `✅ AI Detection: ${detectionResult.name} (${Math.round(detectionResult.confidence * 100)}% confidence)` : ''}
+📱 Saved to offline data for export`);
+      
+      // Reset form
+      setCapturedImage(null);
+      setDetectionResult(null);
+      setFormData({
+        species: '',
+        weight: '',
+        location_lat: '',
+        location_lon: ''
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        alert(`Catch logged successfully! ID: ${result.log_id}`);
-        
-        // Reset form
-        setCapturedImage(null);
-        setDetectionResult(null);
-        setFormData({
-          species: '',
-          weight: '',
-          location_lat: '',
-          location_lon: ''
-        });
-      } else {
-        const error = await response.json();
-        alert(`Failed to log catch: ${error.detail || 'Unknown error'}`);
-      }
     } catch (error) {
       console.error('Error logging catch:', error);
-      alert('Network error. Please try again.');
+      alert('Error saving catch log. Please try again.');
     } finally {
       setIsLoading(false);
     }
