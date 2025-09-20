@@ -32,6 +32,119 @@ from geopy.distance import geodesic
 import aiofiles
 from maritime_safety import maritime_safety
 
+# MarineTraffic API Functions
+async def fetch_marine_traffic_vessels():
+    """Fetch real-time vessel data from MarineTraffic API"""
+    try:
+        url = f"https://services.marinetraffic.com/api/exportvessel/v:5/{MARINE_TRAFFIC_API_KEY}/fleet:{MARINE_TRAFFIC_FLEET_ID}/protocol:json"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10.0)
+            
+        if response.status_code == 200:
+            vessels = response.json()
+            logger.info(f"Successfully fetched {len(vessels)} vessels from MarineTraffic API")
+            return vessels
+        else:
+            logger.error(f"MarineTraffic API error: {response.status_code} - {response.text}")
+            return []
+    except Exception as e:
+        logger.error(f"Error fetching MarineTraffic data: {e}")
+        return []
+
+def check_collision_risk(user_lat: float, user_lon: float, vessels: List[Dict]) -> List[Dict]:
+    """Check collision risk between user and nearby vessels"""
+    alerts = []
+    user_pos = (user_lat, user_lon)
+
+    for vessel in vessels:
+        try:
+            vlat = float(vessel.get("LAT", 0))
+            vlon = float(vessel.get("LON", 0))
+            vname = vessel.get("SHIPNAME", "Unknown Vessel")
+            vspeed = float(vessel.get("SPEED", 0))
+            vcourse = float(vessel.get("COURSE", 0))
+            vtype = vessel.get("TYPE", "Unknown")
+            vmmsi = vessel.get("MMSI", "Unknown")
+
+            # Calculate distance
+            dist_km = geodesic(user_pos, (vlat, vlon)).km
+
+            # Determine alert level
+            alert_level = "SAFE"
+            if dist_km <= 1.0:
+                alert_level = "DANGER"
+            elif dist_km <= 3.0:
+                alert_level = "WARNING"
+
+            vessel_data = {
+                "id": f"mt_{vmmsi}",
+                "name": vname,
+                "mmsi": vmmsi,
+                "type": vtype,
+                "lat": vlat,
+                "lon": vlon,
+                "speed_knots": vspeed,
+                "course_degrees": vcourse,
+                "distance_km": round(dist_km, 2),
+                "alert_level": {
+                    "level": alert_level,
+                    "message": "Collision Risk!" if alert_level == "DANGER" else 
+                              "Close Approach" if alert_level == "WARNING" else "Safe Distance"
+                },
+                "last_update": datetime.now().isoformat(),
+                "status": "Underway" if vspeed > 0.5 else "At Anchor",
+                "marker_color": get_vessel_color(vtype, alert_level),
+                "marker_shape": "triangle" if vspeed > 0.5 else "circle",
+                "size": get_vessel_size(vtype)
+            }
+
+            alerts.append(vessel_data)
+
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Error processing vessel data: {e}")
+            continue
+
+    return sorted(alerts, key=lambda x: x["distance_km"])
+
+def get_vessel_color(vessel_type: str, alert_level: str) -> str:
+    """Get color for vessel marker based on type and alert level"""
+    if alert_level == "DANGER":
+        return "#ef4444"  # Red
+    if alert_level == "WARNING":
+        return "#f59e0b"  # Orange
+    
+    # Color by vessel type
+    colors = {
+        'Cargo': '#3b82f6',      # Blue
+        'Tanker': '#ef4444',     # Red
+        'Fishing': '#10b981',    # Green
+        'Passenger': '#8b5cf6',  # Purple
+        'Tug': '#f59e0b',        # Orange
+        'Pilot': '#06b6d4',      # Cyan
+        'Container': '#84cc16',  # Lime
+        'Bulk Carrier': '#f97316', # Orange
+        'RoRo': '#ec4899',       # Pink
+        'Cruise': '#6366f1'      # Indigo
+    }
+    return colors.get(vessel_type, '#6b7280')  # Gray default
+
+def get_vessel_size(vessel_type: str) -> str:
+    """Get size for vessel marker based on type"""
+    sizes = {
+        'Tanker': 'large',
+        'Cruise': 'large',
+        'Container': 'large',
+        'Bulk Carrier': 'large',
+        'Cargo': 'medium',
+        'Passenger': 'medium',
+        'RoRo': 'medium',
+        'Fishing': 'small',
+        'Tug': 'small',
+        'Pilot': 'small'
+    }
+    return sizes.get(vessel_type, 'medium')
+
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -48,6 +161,10 @@ db = client[os.environ['DB_NAME']]
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("gemini_api")  # Your provided API key
 genai.configure(api_key=GEMINI_API_KEY)
+
+# MarineTraffic API Configuration
+MARINE_TRAFFIC_API_KEY = os.getenv("MARINE_TRAFFIC_API_KEY", "e48ab3d80a0e2a9bf28930f2dd08800c")
+MARINE_TRAFFIC_FLEET_ID = os.getenv("MARINE_TRAFFIC_FLEET_ID", "e48ab3d80a0e2a9bf28930f2dd08800c")
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Hugging Face configuration
@@ -969,6 +1086,90 @@ async def get_complete_safety_report(
     except Exception as e:
         logger.error(f"Error generating safety report: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate safety report")
+
+@api_router.get("/maritime/real-time-vessels")
+async def get_real_time_vessels(
+    lat: float = Query(..., description="User latitude"),
+    lon: float = Query(..., description="User longitude"),
+    radius: float = Query(50, description="Vessel search radius in km")
+):
+    """
+    🚢 REAL-TIME MARINE TRAFFIC DATA
+    Fetches live vessel data from MarineTraffic API
+    """
+    try:
+        # Fetch real-time vessel data from MarineTraffic API
+        marine_vessels = await fetch_marine_traffic_vessels()
+        
+        if not marine_vessels:
+            logger.warning("No data from MarineTraffic API, using fallback")
+            # Fallback to mock data if API fails
+            vessels = await maritime_safety.get_nearby_vessels(lat, lon, radius)
+            return {
+                "status": "success",
+                "data": {
+                    "vessels": vessels,
+                    "source": "fallback",
+                    "total_vessels": len(vessels),
+                    "api_status": "offline"
+                }
+            }
+        
+        # Process real MarineTraffic data
+        processed_vessels = check_collision_risk(lat, lon, marine_vessels)
+        
+        # Filter by radius
+        nearby_vessels = [v for v in processed_vessels if v["distance_km"] <= radius]
+        
+        # Calculate safety metrics
+        danger_vessels = [v for v in nearby_vessels if v["alert_level"]["level"] == "DANGER"]
+        warning_vessels = [v for v in nearby_vessels if v["alert_level"]["level"] == "WARNING"]
+        
+        return {
+            "status": "success",
+            "data": {
+                "vessels": nearby_vessels,
+                "source": "marine_traffic_api",
+                "total_vessels": len(nearby_vessels),
+                "danger_vessels": len(danger_vessels),
+                "warning_vessels": len(warning_vessels),
+                "closest_vessel_km": nearby_vessels[0]["distance_km"] if nearby_vessels else 0,
+                "api_status": "online",
+                "last_updated": datetime.now().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching real-time vessels: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch real-time vessel data")
+
+@api_router.get("/maritime/vessel-details/{mmsi}")
+async def get_vessel_details(mmsi: str):
+    """
+    🚢 VESSEL DETAILS
+    Get detailed information about a specific vessel by MMSI
+    """
+    try:
+        # Fetch all vessels and find the specific one
+        marine_vessels = await fetch_marine_traffic_vessels()
+        
+        for vessel in marine_vessels:
+            if vessel.get("MMSI") == mmsi:
+                return {
+                    "status": "success",
+                    "data": {
+                        "vessel": vessel,
+                        "source": "marine_traffic_api"
+                    }
+                }
+        
+        raise HTTPException(status_code=404, detail="Vessel not found")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching vessel details: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch vessel details")
 
 # =============================================================================
 # 🐟 CATCH LOGGING WITH IMAGE CLASSIFICATION

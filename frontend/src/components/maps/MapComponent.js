@@ -3,7 +3,7 @@ import Map, { Marker, Popup, NavigationControl, GeolocateControl, Source, Layer 
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { MapPin, Navigation, AlertTriangle, Fish, Waves, ExternalLink } from 'lucide-react';
+import { MapPin, Navigation, AlertTriangle, Fish, Waves, ExternalLink, Ship } from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoicHJhbmF5MDk2IiwiYSI6ImNtZnBlczl5bzA5dW8ybHNjdmc2Y2toOWIifQ.jJSKHO7NHQCRQv7AUxn0kw';
@@ -140,22 +140,52 @@ const MapComponent = ({
           </Source>
         )}
 
-        {/* Fishing Zone Markers */}
-        {fishingZones.map((zone, index) => (
+        {/* Vessel Markers */}
+        {fishingZones.map((vessel, index) => (
           <Marker
             key={index}
-            longitude={zone.lon}
-            latitude={zone.lat}
+            longitude={vessel.lon}
+            latitude={vessel.lat}
             anchor="center"
-            onClick={() => setSelectedZone(zone)}
+            onClick={() => setSelectedZone(vessel)}
           >
-            <div 
-              className="w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform"
-              style={{ backgroundColor: getScoreColor(zone.score) }}
-            >
-              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white text-xs px-1 rounded opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">
-                {zone.location_name || `Zone ${index + 1}`}
+            {vessel.marker_shape === 'triangle' ? (
+              // Moving vessel - triangle/arrow shape
+              <div 
+                className="cursor-pointer hover:scale-110 transition-transform"
+                style={{ 
+                  width: vessel.size === 'large' ? '12px' : vessel.size === 'medium' ? '10px' : '8px',
+                  height: vessel.size === 'large' ? '12px' : vessel.size === 'medium' ? '10px' : '8px',
+                  transform: `rotate(${vessel.course_degrees || 0}deg)`
+                }}
+              >
+                <div 
+                  className="w-full h-full"
+                  style={{
+                    clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+                    backgroundColor: vessel.marker_color || getScoreColor(vessel.score),
+                    border: '1px solid white',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}
+                />
               </div>
+            ) : (
+              // Stationary vessel - circle shape
+              <div 
+                className="cursor-pointer hover:scale-110 transition-transform"
+                style={{ 
+                  width: vessel.size === 'large' ? '12px' : vessel.size === 'medium' ? '10px' : '8px',
+                  height: vessel.size === 'large' ? '12px' : vessel.size === 'medium' ? '10px' : '8px'
+                }}
+              >
+                <div 
+                  className="w-full h-full rounded-full border-2 border-white shadow-lg"
+                  style={{ backgroundColor: vessel.marker_color || getScoreColor(vessel.score) }}
+                />
+              </div>
+            )}
+            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white text-xs px-1 rounded opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">
+              {vessel.location_name || `Vessel ${index + 1}`}
             </div>
           </Marker>
         ))}
@@ -188,7 +218,7 @@ const MapComponent = ({
           </Marker>
         ))}
 
-        {/* Selected Zone Popup */}
+        {/* Selected Zone/Vessel Popup */}
         {selectedZone && (
           <Popup
             longitude={selectedZone.lon}
@@ -201,44 +231,73 @@ const MapComponent = ({
             <div className="p-3 min-w-64">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Fish className="w-4 h-4 text-sky-600" />
-                  <span className="font-medium">{selectedZone.location_name || 'Fishing Zone'}</span>
+                  {selectedZone.vessel_type ? (
+                    <Ship className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <Fish className="w-4 h-4 text-sky-600" />
+                  )}
+                  <span className="font-medium">{selectedZone.location_name || 'Zone'}</span>
                 </div>
                 <Badge className={`${getScoreColor(selectedZone.score) === '#22c55e' ? 'bg-green-100 text-green-800' : 
                   getScoreColor(selectedZone.score) === '#eab308' ? 'bg-yellow-100 text-yellow-800' : 
                   'bg-red-100 text-red-800'}`}>
-                  {getScoreLabel(selectedZone.score)}
+                  {selectedZone.alert_level || getScoreLabel(selectedZone.score)}
                 </Badge>
               </div>
               
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Overall Score:</span>
-                  <span className="font-medium">{Math.round(selectedZone.score * 100)}%</span>
-                </div>
-                {selectedZone.sst !== undefined && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Sea Temperature:</span>
-                    <span className="font-medium">{Math.round(selectedZone.sst * 100)}%</span>
-                  </div>
-                )}
-                {selectedZone.chlorophyll !== undefined && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Chlorophyll:</span>
-                    <span className="font-medium">{Math.round(selectedZone.chlorophyll * 100)}%</span>
-                  </div>
-                )}
-                {selectedZone.wind !== undefined && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Wind Conditions:</span>
-                    <span className="font-medium">{Math.round(selectedZone.wind * 100)}%</span>
-                  </div>
-                )}
-                {selectedZone.current !== undefined && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Ocean Current:</span>
-                    <span className="font-medium">{Math.round(selectedZone.current * 100)}%</span>
-                  </div>
+                {selectedZone.vessel_type ? (
+                  // Vessel information
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Vessel Type:</span>
+                      <span className="font-medium">{selectedZone.vessel_type}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Speed:</span>
+                      <span className="font-medium">{selectedZone.speed_knots?.toFixed(1)} kts</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Course:</span>
+                      <span className="font-medium">{selectedZone.course_degrees?.toFixed(0)}°</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Distance:</span>
+                      <span className="font-medium">{selectedZone.distance_km?.toFixed(2)} km</span>
+                    </div>
+                  </>
+                ) : (
+                  // Fishing zone information
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Overall Score:</span>
+                      <span className="font-medium">{Math.round(selectedZone.score * 100)}%</span>
+                    </div>
+                    {selectedZone.sst !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Sea Temperature:</span>
+                        <span className="font-medium">{Math.round(selectedZone.sst * 100)}%</span>
+                      </div>
+                    )}
+                    {selectedZone.chlorophyll !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Chlorophyll:</span>
+                        <span className="font-medium">{Math.round(selectedZone.chlorophyll * 100)}%</span>
+                      </div>
+                    )}
+                    {selectedZone.wind !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Wind Conditions:</span>
+                        <span className="font-medium">{Math.round(selectedZone.wind * 100)}%</span>
+                      </div>
+                    )}
+                    {selectedZone.current !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Ocean Current:</span>
+                        <span className="font-medium">{Math.round(selectedZone.current * 100)}%</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 <div className="pt-2 text-xs text-gray-500">
                   {selectedZone.lat.toFixed(4)}°N, {selectedZone.lon.toFixed(4)}°E
@@ -264,32 +323,48 @@ const MapComponent = ({
 
       {/* Map Legend */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
-        <h4 className="font-medium text-sm mb-2">Map Legend</h4>
+        <h4 className="font-medium text-sm mb-2">Marine Traffic Legend</h4>
         <div className="space-y-1 text-xs">
           {fishingZones.length > 0 && (
             <>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>Excellent Fishing Zone (80%+)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <span>Good Fishing Zone (60-80%)</span>
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span>Cargo Vessels</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span>Fair Fishing Zone (&lt;60%)</span>
+                <span>Tankers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>Fishing Vessels</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                <span>Passenger Ships</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                <span>Tugs & Others</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-3 h-3" style={{clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)', backgroundColor: '#3b82f6'}}></div>
+                <span>Moving Vessels (Triangles)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                <span>Stationary Vessels (Circles)</span>
               </div>
             </>
           )}
           {currentLocation && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
               <span>Your Location</span>
             </div>
           )}
           <div className="pt-2 text-xs text-gray-400">
-            Click on zones for details
+            Click on vessels for details • Colors indicate vessel type
           </div>
         </div>
       </div>
