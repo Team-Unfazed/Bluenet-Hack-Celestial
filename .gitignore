@@ -115,3 +115,7 @@ backend/models/best_clf.pt
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
