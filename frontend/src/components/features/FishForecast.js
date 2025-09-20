@@ -520,25 +520,28 @@ const FishForecast = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">AI Fish Forecasting</h2>
-          <p className="text-gray-600 mt-1">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 max-w-full overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">AI Fish Forecasting</h2>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             AI-powered environmental analysis to predict the best fishing spots
           </p>
         </div>
-        <div className="flex gap-2 mt-4 sm:mt-0">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           <Button 
             variant="outline" 
             onClick={getCurrentLocation}
             disabled={loading}
+            size="sm"
+            className="text-xs sm:text-sm w-full sm:w-auto"
           >
-            <MapPin className="w-4 h-4 mr-2" />
-            Use My Location
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Use My Location</span>
+            <span className="sm:hidden">My Location</span>
           </Button>
-          <Button onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Button onClick={handleRefresh} disabled={loading} size="sm" className="text-xs sm:text-sm w-full sm:w-auto">
+            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>

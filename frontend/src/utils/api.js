@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API_BASE = `${BACKEND_URL}/api`;
 
 // Create axios instance with default config
@@ -15,6 +15,8 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.data);
+    
     // Add auth token if available
     const user = localStorage.getItem('bluenet_user');
     if (user) {
@@ -37,9 +39,12 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log('✅ API Response:', response.status, response.config.url, response.data);
     return response;
   },
   (error) => {
+    console.error('❌ API Error:', error.response?.status, error.config?.url, error.response?.data || error.message);
+    
     if (error.response?.status === 401) {
       // Clear invalid auth data
       localStorage.removeItem('bluenet_user');

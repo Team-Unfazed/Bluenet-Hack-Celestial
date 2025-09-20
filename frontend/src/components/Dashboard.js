@@ -138,13 +138,13 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Page header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
             Welcome back, {currentUser?.name}!
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-sm sm:text-base text-gray-600 mt-2">
             {currentUser?.role === 'policymaker' 
               ? 'Monitor fishing activities and compliance across all regions'
               : 'Your smart fishing assistant powered by AI technology'
@@ -154,7 +154,7 @@ const Dashboard = () => {
 
         {/* Active alerts */}
         {dashboardData.alerts.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             {dashboardData.alerts.slice(0, 2).map((alert, index) => (
               <Alert key={index} className={`mb-2 ${
                 alert.severity === 'high' ? 'border-red-200 bg-red-50' :
@@ -166,7 +166,7 @@ const Dashboard = () => {
                   alert.severity === 'medium' ? 'text-yellow-600' :
                   'text-blue-600'
                 }`} />
-                <AlertDescription className="font-medium">
+                <AlertDescription className="font-medium text-sm">
                   {alert.message}
                 </AlertDescription>
               </Alert>
@@ -175,14 +175,14 @@ const Dashboard = () => {
         )}
 
         {/* Dashboard tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 sm:space-y-6">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 w-full h-auto">
             {tabs.map((tab) => {
               const IconComponent = tab.icon;
               return (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-1 text-xs">
-                  <IconComponent className="h-3 w-3" />
-                  <span className="hidden sm:inline text-xs">{tab.label}</span>
+                <TabsTrigger key={tab.id} value={tab.id} className="flex flex-col sm:flex-row items-center gap-1 p-2 sm:p-3 text-xs">
+                  <IconComponent className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs sm:text-sm">{tab.label}</span>
                 </TabsTrigger>
               );
             })}

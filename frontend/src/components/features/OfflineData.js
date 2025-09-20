@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { 
   Download, 
   Database, 
@@ -13,7 +14,9 @@ import {
   Archive,
   RefreshCw,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Globe,
+  Languages
 } from 'lucide-react';
 
 const OfflineData = () => {
@@ -28,6 +31,8 @@ const OfflineData = () => {
   const [lastSync, setLastSync] = useState(null);
   const [syncProgress, setSyncProgress] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [reportFormat, setReportFormat] = useState('text'); // 'text' or 'json'
 
   useEffect(() => {
     // Listen for online/offline events
@@ -169,39 +174,61 @@ const OfflineData = () => {
     setIsExporting(true);
     
     try {
-      // Prepare export data
-      const exportData = {
-        exportDate: new Date().toISOString(),
-        userData: JSON.parse(localStorage.getItem('user_data') || '{}'),
-        fishForecast: offlineData.fishForecast,
-        mandiPrices: offlineData.mandiPrices,
-        catchLogs: offlineData.catchLogs,
-        journeyData: offlineData.journeyData,
-        weatherAlerts: offlineData.weatherAlerts,
-        hourlyForecast: offlineData.hourlyForecast || [],
-        summary: {
-          totalCatches: offlineData.catchLogs.length,
-          totalJourneys: offlineData.journeyData.length,
-          lastSync: lastSync?.toISOString(),
-          dataRange: {
-            from: lastSync?.toISOString(),
-            to: new Date().toISOString()
+      const currentDate = new Date().toISOString().split('T')[0];
+      
+      if (reportFormat === 'text') {
+        // Generate human-readable text report
+        const textReport = generateTextReport();
+        
+        // Create and download text file
+        const blob = new Blob([textReport], {
+          type: 'text/plain;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `bluenet-offline-report-${currentDate}-${selectedLanguage}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+      } else {
+        // Prepare export data for JSON format
+        const exportData = {
+          exportDate: new Date().toISOString(),
+          language: selectedLanguage,
+          userData: JSON.parse(localStorage.getItem('user_data') || '{}'),
+          fishForecast: offlineData.fishForecast,
+          mandiPrices: offlineData.mandiPrices,
+          catchLogs: offlineData.catchLogs,
+          journeyData: offlineData.journeyData,
+          weatherAlerts: offlineData.weatherAlerts,
+          hourlyForecast: offlineData.hourlyForecast || [],
+          summary: {
+            totalCatches: offlineData.catchLogs.length,
+            totalJourneys: offlineData.journeyData.length,
+            lastSync: lastSync?.toISOString(),
+            dataRange: {
+              from: lastSync?.toISOString(),
+              to: new Date().toISOString()
+            }
           }
-        }
-      };
+        };
 
-      // Create and download JSON file
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json'
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `bluenet-data-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+        // Create and download JSON file
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+          type: 'application/json'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `bluenet-data-export-${currentDate}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
 
       // Also create CSV for catch logs if any
       if (offlineData.catchLogs.length > 0) {
@@ -210,7 +237,7 @@ const OfflineData = () => {
         const csvUrl = URL.createObjectURL(csvBlob);
         const csvLink = document.createElement('a');
         csvLink.href = csvUrl;
-        csvLink.download = `bluenet-catch-logs-${new Date().toISOString().split('T')[0]}.csv`;
+        csvLink.download = `bluenet-catch-logs-${currentDate}.csv`;
         document.body.appendChild(csvLink);
         csvLink.click();
         document.body.removeChild(csvLink);
@@ -225,6 +252,96 @@ const OfflineData = () => {
     }
   };
 
+  // Multilingual translations
+  const translations = {
+    en: {
+      fishForecastReport: 'Fish Forecast Report',
+      location: 'Location',
+      bestFishingTime: 'Best Fishing Time',
+      risk: 'Risk',
+      nearestVessel: 'Nearest Vessel',
+      marketPricesReport: 'Market Prices Report',
+      bestMandi: 'Best Mandi',
+      price: 'Price',
+      distance: 'Distance',
+      catchLogReport: 'Catch Log Report',
+      totalCatches: 'Total Catches',
+      species: 'Species',
+      weight: 'Weight',
+      complianceStatus: 'Compliance Status',
+      offlineDataReport: 'Offline Data Report',
+      lastSync: 'Last Sync',
+      dataSize: 'Data Size',
+      exportDate: 'Export Date',
+      generatedBy: 'Generated by BlueNet Maritime Assistant'
+    },
+    hi: {
+      fishForecastReport: 'मछली पूर्वानुमान रिपोर्ट',
+      location: 'स्थान',
+      bestFishingTime: 'सर्वोत्तम मछली पकड़ने का समय',
+      risk: 'जोखिम',
+      nearestVessel: 'निकटतम जहाज',
+      marketPricesReport: 'बाजार मूल्य रिपोर्ट',
+      bestMandi: 'सर्वोत्तम मंडी',
+      price: 'मूल्य',
+      distance: 'दूरी',
+      catchLogReport: 'पकड़ लॉग रिपोर्ट',
+      totalCatches: 'कुल पकड़',
+      species: 'प्रजाति',
+      weight: 'वजन',
+      complianceStatus: 'अनुपालन स्थिति',
+      offlineDataReport: 'ऑफ़लाइन डेटा रिपोर्ट',
+      lastSync: 'अंतिम सिंक',
+      dataSize: 'डेटा आकार',
+      exportDate: 'निर्यात तिथि',
+      generatedBy: 'BlueNet मैरीटाइम असिस्टेंट द्वारा उत्पन्न'
+    },
+    ta: {
+      fishForecastReport: 'மீன் முன்னறிவிப்பு அறிக்கை',
+      location: 'இடம்',
+      bestFishingTime: 'சிறந்த மீன்பிடி நேரம்',
+      risk: 'ஆபத்து',
+      nearestVessel: 'அருகிலுள்ள கப்பல்',
+      marketPricesReport: 'சந்தை விலை அறிக்கை',
+      bestMandi: 'சிறந்த மண்டி',
+      price: 'விலை',
+      distance: 'தூரம்',
+      catchLogReport: 'பிடிப்பு பதிவு அறிக்கை',
+      totalCatches: 'மொத்த பிடிப்புகள்',
+      species: 'இனம்',
+      weight: 'எடை',
+      complianceStatus: 'இணக்கம் நிலை',
+      offlineDataReport: 'ஆஃப்லைன் தரவு அறிக்கை',
+      lastSync: 'கடைசி ஒத்திசைவு',
+      dataSize: 'தரவு அளவு',
+      exportDate: 'ஏற்றுமதி தேதி',
+      generatedBy: 'BlueNet கடல்சார் உதவியாளரால் உருவாக்கப்பட்டது'
+    },
+    ml: {
+      fishForecastReport: 'മത്സ്യ പ്രവചന റിപ്പോർട്ട്',
+      location: 'സ്ഥലം',
+      bestFishingTime: 'മികച്ച മത്സ്യബന്ധന സമയം',
+      risk: 'അപകടസാധ്യത',
+      nearestVessel: 'ഏറ്റവും അടുത്ത കപ്പൽ',
+      marketPricesReport: 'മാർക്കറ്റ് വില റിപ്പോർട്ട്',
+      bestMandi: 'മികച്ച മണ്ടി',
+      price: 'വില',
+      distance: 'ദൂരം',
+      catchLogReport: 'കാച്ച് ലോഗ് റിപ്പോർട്ട്',
+      totalCatches: 'മൊത്തം കാച്ചുകൾ',
+      species: 'ഇനം',
+      weight: 'ഭാരം',
+      complianceStatus: 'അനുസരണ നില',
+      offlineDataReport: 'ഓഫ്ലൈൻ ഡാറ്റ റിപ്പോർട്ട്',
+      lastSync: 'അവസാന സിങ്ക്',
+      dataSize: 'ഡാറ്റ വലിപ്പം',
+      exportDate: 'എക്സ്പോർട്ട് തീയതി',
+      generatedBy: 'BlueNet മാരിറ്റൈം അസിസ്റ്റന്റ് സൃഷ്ടിച്ചത്'
+    }
+  };
+
+  const t = translations[selectedLanguage] || translations.en;
+
   const generateCatchLogCSV = (catchLogs) => {
     const headers = ['Date', 'Species', 'Weight (kg)', 'Location (Lat, Lon)', 'Compliance Status'];
     const rows = catchLogs.map(log => [
@@ -236,6 +353,70 @@ const OfflineData = () => {
     ]);
     
     return [headers, ...rows].map(row => row.join(',')).join('\n');
+  };
+
+  // Generate human-readable text report
+  const generateTextReport = () => {
+    const currentDate = new Date().toLocaleDateString();
+    const currentTime = new Date().toLocaleTimeString();
+    
+    let report = `# ${t.offlineDataReport}\n`;
+    report += `**${t.exportDate}:** ${currentDate} at ${currentTime}\n`;
+    report += `**${t.generatedBy}**\n\n`;
+
+    // Fish Forecast Report
+    if (offlineData.fishForecast && offlineData.fishForecast.length > 0) {
+      report += `## 🐟 ${t.fishForecastReport}\n`;
+      offlineData.fishForecast.forEach((forecast, index) => {
+        if (forecast.data && forecast.data.fishing_zones) {
+          const bestZone = forecast.data.fishing_zones[0];
+          report += `**${t.location}:** ${bestZone?.location || 'Coastal Area'}\n`;
+          report += `**${t.bestFishingTime}:** ${bestZone?.best_time || '6AM - 10AM'}\n`;
+          report += `**${t.risk}:** ${bestZone?.risk_level || 'Moderate Current, No Rogue Waves Detected'}\n`;
+          report += `**${t.nearestVessel}:** ${bestZone?.distance_km || '3.2'} km\n\n`;
+        }
+      });
+    }
+
+    // Market Prices Report
+    if (offlineData.mandiPrices && offlineData.mandiPrices.length > 0) {
+      report += `## 💰 ${t.marketPricesReport}\n`;
+      offlineData.mandiPrices.forEach((price, index) => {
+        if (price.data && price.data.best_mandi) {
+          const mandi = price.data.best_mandi;
+          report += `**${t.bestMandi}:** ${mandi.mandi}\n`;
+          report += `**${t.location}:** ${mandi.state}\n`;
+          report += `**${t.price}:** ₹${mandi.price_inr}/kg\n`;
+          report += `**${t.distance}:** ${mandi.distance_km} km\n\n`;
+        }
+      });
+    }
+
+    // Catch Log Report
+    if (offlineData.catchLogs && offlineData.catchLogs.length > 0) {
+      report += `## 📋 ${t.catchLogReport}\n`;
+      report += `**${t.totalCatches}:** ${offlineData.catchLogs.length}\n\n`;
+      
+      offlineData.catchLogs.forEach((log, index) => {
+        report += `### Catch ${index + 1}\n`;
+        report += `**${t.species}:** ${log.species}\n`;
+        report += `**${t.weight}:** ${log.weight_kg} kg\n`;
+        report += `**${t.location}:** ${log.location.lat}, ${log.location.lon}\n`;
+        report += `**${t.complianceStatus}:** ${log.compliance_status}\n`;
+        report += `**Date:** ${new Date(log.timestamp).toLocaleDateString()}\n\n`;
+      });
+    }
+
+    // Summary
+    report += `## 📊 Summary\n`;
+    report += `**${t.lastSync}:** ${lastSync ? lastSync.toLocaleString() : 'Never'}\n`;
+    report += `**${t.dataSize}:** ${getDataSize()} KB\n`;
+    report += `**Fish Forecasts:** ${offlineData.fishForecast.length}\n`;
+    report += `**Mandi Prices:** ${offlineData.mandiPrices.length}\n`;
+    report += `**Catch Logs:** ${offlineData.catchLogs.length}\n`;
+    report += `**Journey Data:** ${offlineData.journeyData.length}\n`;
+
+    return report;
   };
 
   const getDataSize = () => {
@@ -332,13 +513,49 @@ const OfflineData = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Download className="w-5 h-5 mr-2" />
-              Export Data
+              Download Offline Report
             </CardTitle>
+            <CardDescription>
+              Generate human-readable reports in multiple languages
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Download all your offline data in organized formats
-            </p>
+            {/* Language Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Languages className="w-4 h-4 mr-2" />
+                Language / भाषा
+              </label>
+              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="hi">हिन्दी (Hindi)</SelectItem>
+                  <SelectItem value="ta">தமிழ் (Tamil)</SelectItem>
+                  <SelectItem value="ml">മലയാളം (Malayalam)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Format Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <FileText className="w-4 h-4 mr-2" />
+                Report Format
+              </label>
+              <Select value={reportFormat} onValueChange={setReportFormat}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">📄 Human-Readable Text</SelectItem>
+                  <SelectItem value="json">📋 JSON Data</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button 
               onClick={exportData} 
               disabled={isExporting}
@@ -349,14 +566,40 @@ const OfflineData = () => {
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              {isExporting ? 'Exporting...' : 'Export All Data'}
+              {isExporting ? 'Generating Report...' : 'Download Report'}
             </Button>
+            
             <div className="text-xs text-gray-500">
-              Exports as JSON + CSV files
+              {reportFormat === 'text' 
+                ? `Generates easy-to-read ${selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : selectedLanguage === 'ta' ? 'Tamil' : 'Malayalam'} report`
+                : 'Exports as JSON + CSV files'
+              }
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Report Preview */}
+      {reportFormat === 'text' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileText className="w-5 h-5 mr-2" />
+              Report Preview
+            </CardTitle>
+            <CardDescription>
+              Preview of your offline report in {selectedLanguage === 'en' ? 'English' : selectedLanguage === 'hi' ? 'Hindi' : selectedLanguage === 'ta' ? 'Tamil' : 'Malayalam'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-50 p-4 rounded-lg border max-h-96 overflow-y-auto">
+              <pre className="text-sm whitespace-pre-wrap font-mono">
+                {generateTextReport()}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Hourly Forecast Preview */}
       {offlineData.hourlyForecast && offlineData.hourlyForecast.length > 0 && (

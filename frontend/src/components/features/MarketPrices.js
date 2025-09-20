@@ -44,12 +44,20 @@ const MarketPrices = () => {
     try {
       setMarketData(prev => ({ ...prev, loading: true }));
       
+      console.log('🔍 Fetching mandi data for:', {
+        port_name: searchForm.port,
+        fish_type: searchForm.fishType,
+        fish_size: searchForm.fishSize
+      });
+      
       // Load market recommendations
       const response = await apiService.getMandiRecommendation({
         port_name: searchForm.port,
         fish_type: searchForm.fishType,
         fish_size: searchForm.fishSize
       });
+      
+      console.log('✅ Mandi API response:', response.data);
       
       setMarketData(prev => ({
         ...prev,
@@ -59,7 +67,12 @@ const MarketPrices = () => {
         loading: false
       }));
     } catch (error) {
-      console.error('Failed to load market data:', error);
+      console.error('❌ Failed to load market data:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      
+      // Show error message to user
+      alert(`Failed to fetch market data: ${error.response?.data?.detail || error.message}`);
+      
       setMarketData(prev => ({
         ...prev,
         recommendations: generateMockRecommendation(),

@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { 
   Camera, 
   Upload, 
@@ -14,7 +15,12 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Loader2
+  Loader2,
+  List,
+  Calendar,
+  Trash2,
+  Eye,
+  Database
 } from 'lucide-react';
 
 const CatchLogger = () => {
@@ -23,6 +29,8 @@ const CatchLogger = () => {
   const [detectionResult, setDetectionResult] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [catchLogs, setCatchLogs] = useState([]);
+  const [activeTab, setActiveTab] = useState('log');
   const [formData, setFormData] = useState({
     species: '',
     weight: '',
@@ -33,6 +41,65 @@ const CatchLogger = () => {
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // Load existing catch logs on component mount
+  useEffect(() => {
+    loadCatchLogs();
+  }, []);
+
+  // Load catch logs from localStorage
+  const loadCatchLogs = () => {
+    try {
+      const existingOfflineData = JSON.parse(localStorage.getItem('bluenet_offline_data') || '{}');
+      const logs = existingOfflineData.catchLogs || [];
+      setCatchLogs(logs);
+    } catch (error) {
+      console.error('Error loading catch logs:', error);
+      setCatchLogs([]);
+    }
+  };
+
+  // Delete a catch log
+  const deleteCatchLog = (logId) => {
+    if (window.confirm('Are you sure you want to delete this catch log?')) {
+      try {
+        const existingOfflineData = JSON.parse(localStorage.getItem('bluenet_offline_data') || '{}');
+        const updatedLogs = existingOfflineData.catchLogs.filter(log => log.id !== logId);
+        
+        const updatedOfflineData = {
+          ...existingOfflineData,
+          catchLogs: updatedLogs,
+          lastUpdate: new Date().toISOString()
+        };
+        
+        localStorage.setItem('bluenet_offline_data', JSON.stringify(updatedOfflineData));
+        setCatchLogs(updatedLogs);
+      } catch (error) {
+        console.error('Error deleting catch log:', error);
+        alert('Error deleting catch log. Please try again.');
+      }
+    }
+  };
+
+  // Clear all catch logs
+  const clearAllCatchLogs = () => {
+    if (window.confirm('Are you sure you want to delete ALL catch logs? This action cannot be undone.')) {
+      try {
+        const existingOfflineData = JSON.parse(localStorage.getItem('bluenet_offline_data') || '{}');
+        const updatedOfflineData = {
+          ...existingOfflineData,
+          catchLogs: [],
+          lastUpdate: new Date().toISOString()
+        };
+        
+        localStorage.setItem('bluenet_offline_data', JSON.stringify(updatedOfflineData));
+        setCatchLogs([]);
+      } catch (error) {
+        console.error('Error clearing catch logs:', error);
+        alert('Error clearing catch logs. Please try again.');
+      }
+    }
+  };
 
   // Get current location
   const getCurrentLocation = () => {
@@ -184,6 +251,9 @@ const CatchLogger = () => {
       
       localStorage.setItem('bluenet_offline_data', JSON.stringify(updatedOfflineData));
       
+      // Refresh the catch logs display
+      setCatchLogs(catchLogs);
+      
       // Try to send to backend (if online)
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
       const token = localStorage.getItem('auth_token');
@@ -247,11 +317,31 @@ ${detectionResult ? `✅ AI Detection: ${detectionResult.name} (${Math.round(det
           <h2 className="text-2xl font-bold text-gray-900">Catch Logger</h2>
           <p className="text-gray-600">Log your catch with AI-powered species identification</p>
         </div>
-        <Button onClick={getCurrentLocation} variant="outline">
-          <MapPin className="w-4 h-4 mr-2" />
-          Get Location
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="flex items-center">
+            <Database className="w-4 h-4 mr-1" />
+            {catchLogs.length} catches logged
+          </Badge>
+          <Button onClick={getCurrentLocation} variant="outline">
+            <MapPin className="w-4 h-4 mr-2" />
+            Get Location
+          </Button>
+        </div>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="log" className="flex items-center">
+            <Fish className="w-4 h-4 mr-2" />
+            Log New Catch
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center">
+            <List className="w-4 h-4 mr-2" />
+            Catch History ({catchLogs.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="log" className="space-y-6">
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Image Capture Section */}
@@ -442,6 +532,110 @@ ${detectionResult ? `✅ AI Detection: ${detectionResult.name} (${Math.round(det
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Catch History</h3>
+              <p className="text-sm text-gray-600">View and manage all your logged catches</p>
+            </div>
+            {catchLogs.length > 0 && (
+              <Button onClick={clearAllCatchLogs} variant="destructive" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear All
+              </Button>
+            )}
+          </div>
+
+          {catchLogs.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <Fish className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No catches logged yet</h3>
+                  <p className="text-gray-600 mb-4">Start logging your catches to see them here</p>
+                  <Button onClick={() => setActiveTab('log')}>
+                    <Fish className="w-4 h-4 mr-2" />
+                    Log Your First Catch
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {catchLogs.map((log, index) => (
+                <Card key={log.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Fish className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 capitalize">
+                              {log.species}
+                            </h4>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                              <span className="flex items-center">
+                                <Weight className="w-4 h-4 mr-1" />
+                                {log.weight_kg} kg
+                              </span>
+                              <span className="flex items-center">
+                                <MapPin className="w-4 h-4 mr-1" />
+                                {log.location.lat.toFixed(4)}°, {log.location.lon.toFixed(4)}°
+                              </span>
+                              <span className="flex items-center">
+                                <Clock className="w-4 h-4 mr-1" />
+                                {new Date(log.timestamp).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {log.ai_classification && (
+                          <div className="mb-3">
+                            <Badge 
+                              variant={log.compliance_status === 'Compliant' ? 'default' : 'destructive'}
+                              className="mr-2"
+                            >
+                              {log.compliance_status}
+                            </Badge>
+                            <span className="text-sm text-gray-600">
+                              AI detected: {log.ai_classification.predicted_species} 
+                              ({Math.round(log.ai_classification.confidence * 100)}% confidence)
+                            </span>
+                          </div>
+                        )}
+
+                        {log.environmental_conditions && (
+                          <div className="text-sm text-gray-600">
+                            <span className="mr-4">🌡️ {log.environmental_conditions.sea_temp}</span>
+                            <span className="mr-4">💨 {log.environmental_conditions.wind}</span>
+                            <span>🌊 {log.environmental_conditions.current}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          onClick={() => deleteCatchLog(log.id)}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

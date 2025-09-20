@@ -20,7 +20,7 @@ import {
   RefreshCw,
   Target
 } from 'lucide-react';
-import MapComponent from '../maps/MapComponent';
+import MarineMapComponent from '../maps/MarineMapComponent';
 
 const MaritimeSafety = () => {
   const [location, setLocation] = useState(null);
@@ -332,7 +332,7 @@ const MaritimeSafety = () => {
       },
       vessel_tracking: {
         vessels_found: vessels.length,
-        closest_vessel_km: vessels[0]?.distance_km || 0,
+        closest_vessel_km: vessels.length > 0 ? (vessels[0].distance_km || 0) : 0,
         collision_alerts: vesselAlerts.length,
         vessels: vessels.slice(0, 5)
       },
@@ -389,7 +389,7 @@ const MaritimeSafety = () => {
         <div className="text-center">
           <div className="font-semibold text-sm">🧭 Live Location</div>
           <div className="text-xs mt-1">
-            {lat.toFixed(6)}°N, {lon.toFixed(6)}°E
+            {lat?.toFixed(6) || '0.000000'}°N, {lon?.toFixed(6) || '0.000000'}°E
           </div>
           <div className="text-xs text-blue-200 mt-1">
             📡 GPS Active • Auto-refresh: {autoRefresh ? '30s' : 'Off'}
@@ -411,37 +411,57 @@ const MaritimeSafety = () => {
     </div>
   );
 
-  return (
-    <div className="space-y-6 p-4 max-w-full">
-      {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">🚢 Maritime Safety & Traffic</h2>
-          <p className="text-gray-600">Real-time vessel tracking, collision avoidance & environmental monitoring</p>
+  // Safety check - ensure we have basic data before rendering
+  if (!safetyReport || !nearbyVessels || !dangerAnalysis) {
+    return (
+      <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 max-w-full overflow-hidden">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="w-8 h-8 mx-auto mb-4 text-yellow-600" />
+            <p className="text-gray-600">Initializing maritime data...</p>
+            <Button onClick={() => getCurrentLocation()} className="mt-4">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 max-w-full overflow-hidden">
+      {/* Header Controls */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">🚢 Maritime Safety & Traffic</h2>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Real-time vessel tracking, collision avoidance & environmental monitoring</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           <Button 
             onClick={getCurrentLocation}
             disabled={loading}
             size="sm"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Updating...' : 'Refresh Data'}
+            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{loading ? 'Updating...' : 'Refresh Data'}</span>
+            <span className="sm:hidden">{loading ? 'Updating...' : 'Refresh'}</span>
           </Button>
           <Button 
             onClick={() => setAutoRefresh(!autoRefresh)}
             variant={autoRefresh ? "default" : "outline"}
             size="sm"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
-            <Clock className="w-4 h-4 mr-2" />
-            Auto: {autoRefresh ? 'ON' : 'OFF'}
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Auto: {autoRefresh ? 'ON' : 'OFF'}</span>
+            <span className="sm:hidden">{autoRefresh ? 'ON' : 'OFF'}</span>
           </Button>
           <select 
             value={trafficDensity} 
             onChange={(e) => setTrafficDensity(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+            className="px-2 sm:px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm bg-white w-full sm:w-auto"
           >
             <option value="low">Low Traffic</option>
             <option value="medium">Medium Traffic</option>
@@ -453,26 +473,26 @@ const MaritimeSafety = () => {
       {/* Overall Safety Status */}
       {safetyReport && (
         <Alert className={`border-2 ${
-          safetyReport.overall_safety.status === 'CRITICAL' ? 'border-red-500 bg-red-50' :
-          safetyReport.overall_safety.status === 'WARNING' ? 'border-orange-500 bg-orange-50' :
+          safetyReport.overall_safety?.status === 'CRITICAL' ? 'border-red-500 bg-red-50' :
+          safetyReport.overall_safety?.status === 'WARNING' ? 'border-orange-500 bg-orange-50' :
           'border-green-500 bg-green-50'
         }`}>
           <AlertTriangle className={`h-4 w-4 ${
-            safetyReport.overall_safety.status === 'CRITICAL' ? 'text-red-600' :
-            safetyReport.overall_safety.status === 'WARNING' ? 'text-orange-600' :
+            safetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-600' :
+            safetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-600' :
             'text-green-600'
           }`} />
           <AlertDescription className={`${
-            safetyReport.overall_safety.status === 'CRITICAL' ? 'text-red-800' :
-            safetyReport.overall_safety.status === 'WARNING' ? 'text-orange-800' :
+            safetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-800' :
+            safetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-800' :
             'text-green-800'
           }`}>
-            <strong>{safetyReport.overall_safety.message}</strong>
+            <strong>{safetyReport.overall_safety?.message || 'Safety status unavailable'}</strong>
             <br />
             <span className="text-sm">
-              Vessels nearby: {safetyReport.vessel_tracking.vessels_found} | 
-              Collision alerts: {safetyReport.vessel_tracking.collision_alerts} | 
-              Closest vessel: {safetyReport.vessel_tracking.closest_vessel_km.toFixed(2)} km
+              Vessels nearby: {safetyReport.vessel_tracking?.vessels_found || 0} | 
+              Collision alerts: {safetyReport.vessel_tracking?.collision_alerts || 0} | 
+              Closest vessel: {safetyReport.vessel_tracking?.closest_vessel_km?.toFixed(2) || '0.00'} km
             </span>
             {safetyReport.api_status && (
               <div className="mt-2 text-xs">
@@ -494,11 +514,11 @@ const MaritimeSafety = () => {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="traffic">Marine Traffic</TabsTrigger>
-          <TabsTrigger value="environmental">Environmental</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm p-2 sm:p-3">Overview</TabsTrigger>
+          <TabsTrigger value="traffic" className="text-xs sm:text-sm p-2 sm:p-3">Marine Traffic</TabsTrigger>
+          <TabsTrigger value="environmental" className="text-xs sm:text-sm p-2 sm:p-3">Environmental</TabsTrigger>
+          <TabsTrigger value="alerts" className="text-xs sm:text-sm p-2 sm:p-3">Alerts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -510,7 +530,7 @@ const MaritimeSafety = () => {
                   <div>
                     <h3 className="font-bold text-lg text-blue-800">📍 Your Live Location</h3>
                     <p className="text-blue-600">
-                      Latitude: {location.lat.toFixed(6)}° | Longitude: {location.lon.toFixed(6)}°
+                      Latitude: {location.lat?.toFixed(6) || '0.000000'}° | Longitude: {location.lon?.toFixed(6) || '0.000000'}°
                     </p>
                     <p className="text-xs text-blue-500">
                       Last updated: {lastUpdate?.toLocaleTimeString()} | Auto-refresh: {autoRefresh ? 'Every 30s' : 'Off'}
@@ -523,7 +543,7 @@ const MaritimeSafety = () => {
           )}
 
           {/* Safety Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -582,13 +602,13 @@ const MaritimeSafety = () => {
             </CardHeader>
             <CardContent className="p-0">
               {location && (
-                <MapComponent
+                <MarineMapComponent
                   initialViewState={{
-                    longitude: location.lon,
-                    latitude: location.lat,
+                    longitude: location?.lon || 0,
+                    latitude: location?.lat || 0,
                     zoom: 8
                   }}
-                  height={600}
+                  height={window.innerWidth < 640 ? 400 : window.innerWidth < 1024 ? 500 : 600}
                   currentLocation={location}
                   fishingZones={nearbyVessels.map(vessel => ({
                     lat: vessel.lat,
@@ -603,9 +623,10 @@ const MaritimeSafety = () => {
                     alert_level: vessel.alert_level.level,
                     marker_color: vessel.marker_color,
                     marker_shape: vessel.marker_shape,
-                    size: vessel.size
+                    size: vessel.size,
+                    mmsi: vessel.mmsi
                   }))}
-                  mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+                  mapStyle="marine"
                 />
               )}
             </CardContent>
@@ -642,9 +663,9 @@ const MaritimeSafety = () => {
                     </div>
                     
                     <div className="text-right">
-                      <div className="font-medium">{vessel.distance_km.toFixed(2)} km</div>
+                      <div className="font-medium">{vessel.distance_km?.toFixed(2) || '0.00'} km</div>
                       <div className="text-sm text-gray-500">
-                        {vessel.speed_knots.toFixed(1)} kts • {vessel.course_degrees.toFixed(0)}°
+                        {vessel.speed_knots?.toFixed(1) || '0.0'} kts • {vessel.course_degrees?.toFixed(0) || '0'}°
                       </div>
                     </div>
                     
@@ -709,7 +730,7 @@ const MaritimeSafety = () => {
                         <span className="font-medium">Sea Temp</span>
                       </div>
                       <div className="text-2xl font-bold text-blue-700">
-                        {dangerAnalysis.environmental_data.sea_surface_temp_c.toFixed(1)}°C
+                        {dangerAnalysis.environmental_data?.sea_surface_temp_c?.toFixed(1) || '0.0'}°C
                       </div>
                     </div>
 
@@ -719,7 +740,7 @@ const MaritimeSafety = () => {
                         <span className="font-medium">Wind</span>
                       </div>
                       <div className="text-2xl font-bold text-green-700">
-                        {dangerAnalysis.environmental_data.wind_speed_knots.toFixed(1)} kts
+                        {dangerAnalysis.environmental_data?.wind_speed_knots?.toFixed(1) || '0.0'} kts
                       </div>
                     </div>
 
@@ -729,7 +750,7 @@ const MaritimeSafety = () => {
                         <span className="font-medium">Current</span>
                       </div>
                       <div className="text-2xl font-bold text-purple-700">
-                        {dangerAnalysis.environmental_data.ocean_current_knots.toFixed(1)} kts
+                        {dangerAnalysis.environmental_data?.ocean_current_knots?.toFixed(1) || '0.0'} kts
                       </div>
                     </div>
 
@@ -791,9 +812,9 @@ const MaritimeSafety = () => {
                       <strong>{vessel.alert_level.message}</strong>
                       <br />
                       <span className="text-sm">
-                        {vessel.name} ({vessel.type}) - {vessel.distance_km.toFixed(2)} km away
+                        {vessel.name} ({vessel.type}) - {vessel.distance_km?.toFixed(2) || '0.00'} km away
                         <br />
-                        Speed: {vessel.speed_knots.toFixed(1)} kts | Course: {vessel.course_degrees.toFixed(0)}°
+                        Speed: {vessel.speed_knots?.toFixed(1) || '0.0'} kts | Course: {vessel.course_degrees?.toFixed(0) || '0'}°
                       </span>
                     </AlertDescription>
                   </Alert>
