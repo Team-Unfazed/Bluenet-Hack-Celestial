@@ -2,24 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Alert, AlertDescription } from '../ui/alert';
 import { 
   Navigation, 
-  AlertTriangle, 
   Shield, 
   Waves, 
   Wind,
   Thermometer,
   Anchor,
   MapPin,
-  RefreshCw,
-  PhoneCall,
-  Radio,
-  Users,
   Clock,
   Crosshair
 } from 'lucide-react';
-import { t } from '../../utils/translations';
 
 const MaritimeSafety = () => {
   const [location, setLocation] = useState(null);
@@ -28,7 +21,6 @@ const MaritimeSafety = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const intervalRef = useRef(null);
-  const mapRef = useRef(null);
 
   useEffect(() => {
     getCurrentLocation();
@@ -57,126 +49,25 @@ const MaritimeSafety = () => {
             lon: position.coords.longitude
           };
           setLocation(loc);
-          fetchEnvironmentalData(loc.lat, loc.lon, true);
-          initializeInteractiveMap(loc.lat, loc.lon);
+          fetchEnvironmentalData(loc.lat, loc.lon);
         },
         (error) => {
           console.error('Error getting location:', error);
           // Fallback to Mumbai coordinates for demo
           const loc = { lat: 19.0760, lon: 72.8777 };
           setLocation(loc);
-          fetchEnvironmentalData(loc.lat, loc.lon, true);
-          initializeInteractiveMap(loc.lat, loc.lon);
+          fetchEnvironmentalData(loc.lat, loc.lon);
         }
       );
     } else {
       // Fallback for browsers without geolocation
       const loc = { lat: 19.0760, lon: 72.8777 };
       setLocation(loc);
-      fetchEnvironmentalData(loc.lat, loc.lon, true);
-      initializeInteractiveMap(loc.lat, loc.lon);
+      fetchEnvironmentalData(loc.lat, loc.lon);
     }
   };
 
-  const initializeInteractiveMap = (lat, lon) => {
-    // Create a simple interactive map representation for live location
-    if (mapRef.current) {
-      mapRef.current.innerHTML = `
-        <div style="
-          width: 100%; 
-          height: 300px; 
-          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
-          border-radius: 8px;
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        ">
-          <!-- Ocean waves animation -->
-          <div style="
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-              90deg,
-              transparent,
-              transparent 20px,
-              rgba(255,255,255,0.1) 20px,
-              rgba(255,255,255,0.1) 40px
-            );
-            animation: waves 3s linear infinite;
-          "></div>
-          
-          <!-- Your location marker -->
-          <div style="
-            position: absolute;
-            z-index: 10;
-            background: #ef4444;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            animation: pulse 2s infinite;
-          "></div>
-          
-          <!-- Location info overlay -->
-          <div style="
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            text-align: center;
-          ">
-            🧭 Live Location: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E
-            <br>
-            📡 GPS Tracking Active • Auto-refresh every 30s
-          </div>
-          
-          <!-- Coordinate grid lines -->
-          <div style="
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: 
-              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 30px 30px;
-            pointer-events: none;
-          "></div>
-        </div>
-        
-        <style>
-          @keyframes waves {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(40px); }
-          }
-          
-          @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-          }
-        </style>
-      `;
-      
-      console.log(`🗺️ Live location map initialized: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-    }
-  };
-
-  const fetchEnvironmentalData = async (lat, lon, showLoading = true) => {
-    if (showLoading) setLoading(true);
-    
+  const fetchEnvironmentalData = async (lat, lon) => {
     try {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
       
@@ -189,7 +80,6 @@ const MaritimeSafety = () => {
         const data = await response.json();
         setDangerAnalysis(data.data);
         setLastUpdate(new Date());
-        
       } else {
         console.error('Failed to fetch environmental data');
         // Fallback environmental data
@@ -202,7 +92,7 @@ const MaritimeSafety = () => {
       setDangerAnalysis(generateMockEnvironmentalData());
       setLastUpdate(new Date());
     } finally {
-      if (showLoading) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -244,13 +134,74 @@ const MaritimeSafety = () => {
     }
   };
 
+  // React-compatible animated map component
+  const LiveLocationMap = ({ lat, lon }) => (
+    <div className="relative w-full h-80 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-lg overflow-hidden">
+      {/* Animated ocean waves background */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent animate-pulse" 
+             style={{ 
+               backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px)',
+               animation: 'waves 3s linear infinite'
+             }}>
+        </div>
+      </div>
+      
+      {/* Coordinate grid */}
+      <div className="absolute inset-0 opacity-20"
+           style={{
+             backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
+             backgroundSize: '40px 40px'
+           }}>
+      </div>
+      
+      {/* Your location marker */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="relative">
+          {/* Pulsing ring */}
+          <div className="absolute -inset-4 bg-red-400 rounded-full animate-ping opacity-75"></div>
+          <div className="absolute -inset-2 bg-red-500 rounded-full animate-pulse opacity-50"></div>
+          {/* Main marker */}
+          <div className="relative w-6 h-6 bg-red-600 rounded-full border-3 border-white shadow-lg flex items-center justify-center">
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Location info overlay */}
+      <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 text-white px-4 py-3 rounded-lg">
+        <div className="text-center">
+          <div className="font-semibold text-sm">🧭 Live Location</div>
+          <div className="text-xs mt-1">
+            {lat.toFixed(6)}°N, {lon.toFixed(6)}°E
+          </div>
+          <div className="text-xs text-blue-200 mt-1">
+            📡 GPS Active • Auto-refresh: {autoRefresh ? '30s' : 'Off'}
+          </div>
+        </div>
+      </div>
+      
+      {/* Compass indicator */}
+      <div className="absolute top-4 right-4 w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
+        <div className="text-white text-2xl">🧭</div>
+      </div>
+      
+      <style jsx>{`
+        @keyframes waves {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(40px); }
+        }
+      `}</style>
+    </div>
+  );
+
   return (
-    <div className="space-y-4 p-4 max-w-full">
+    <div className="space-y-6 p-4 max-w-full">
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">🧭 Live Location Tracker</h2>
-          <p className="text-sm text-gray-600">Your live location tracking & environmental conditions</p>
+          <h2 className="text-2xl font-bold text-gray-900">🧭 Live Location Tracker</h2>
+          <p className="text-gray-600">Your live GPS location & environmental monitoring</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button 
@@ -281,7 +232,7 @@ const MaritimeSafety = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-lg text-blue-800">📍 Your Live Location</h3>
-                <p className="text-sm text-blue-600">
+                <p className="text-blue-600">
                   Latitude: {location.lat.toFixed(6)}° | Longitude: {location.lon.toFixed(6)}°
                 </p>
                 <p className="text-xs text-blue-500">
@@ -294,50 +245,36 @@ const MaritimeSafety = () => {
         </Card>
       )}
 
-      {/* Interactive VesselFinder Map - Live Location Only */}
+      {/* Interactive Live Location Map */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-base">
+        <CardHeader>
+          <CardTitle className="flex items-center">
             <Navigation className="w-5 h-5 mr-2 text-blue-600" />
             Interactive Live Location Map
           </CardTitle>
           <CardDescription>
-            Your current position on interactive map - Live tracking enabled
+            Your current position with real-time GPS tracking
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div 
-            ref={mapRef}
-            className="h-64 sm:h-80 rounded-lg overflow-hidden bg-blue-50 border border-blue-200"
-            style={{ minHeight: '300px' }}
-          >
-            {/* VesselFinder interactive map will be injected here */}
-            {!location && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Crosshair className="w-12 h-12 mx-auto text-blue-400 animate-pulse" />
-                  <p className="text-blue-600 mt-2">Getting your location...</p>
-                </div>
-              </div>
-            )}
-          </div>
+          {location && <LiveLocationMap lat={location.lat} lon={location.lon} />}
         </CardContent>
       </Card>
 
-      {/* Environmental Conditions */}
+      {/* Environmental Conditions Grid */}
       {dangerAnalysis && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Overall Status */}
           <Card className={`${getStatusColor(dangerAnalysis.risk_analysis.overall_risk_level)} border-2`}>
-            <CardContent className="p-4">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-lg">{dangerAnalysis.risk_analysis.risk_message}</h3>
-                  <p className="text-sm">
+                  <h3 className="font-bold text-xl">{dangerAnalysis.risk_analysis.risk_message}</h3>
+                  <p className="text-sm mt-1">
                     Risk Level: {dangerAnalysis.risk_analysis.overall_risk_level}
                   </p>
                 </div>
-                <Shield className={`w-8 h-8 ${
+                <Shield className={`w-10 h-10 ${
                   dangerAnalysis.risk_analysis.overall_risk_level.includes('DANGER') ? 'text-red-600' :
                   dangerAnalysis.risk_analysis.overall_risk_level === 'CAUTION' ? 'text-orange-600' :
                   'text-green-600'
@@ -348,54 +285,53 @@ const MaritimeSafety = () => {
 
           {/* Environmental Data */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-base">
+            <CardHeader>
+              <CardTitle className="flex items-center">
                 <Waves className="w-5 h-5 mr-2 text-blue-600" />
                 Environmental Conditions
               </CardTitle>
               <CardDescription>
-                Real-time environmental analysis at your location
+                Real-time analysis at your location
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Environmental Data Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-                  <div className="flex items-center gap-2">
-                    <Thermometer className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium">Sea Temp</span>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Thermometer className="w-5 h-5 text-blue-600" />
+                    <span className="font-medium">Sea Temp</span>
                   </div>
-                  <div className="text-lg font-bold text-blue-700">
+                  <div className="text-2xl font-bold text-blue-700">
                     {dangerAnalysis.environmental_data.sea_surface_temp_c.toFixed(1)}°C
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-green-50 border border-green-200">
-                  <div className="flex items-center gap-2">
-                    <Wind className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium">Wind</span>
+                <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wind className="w-5 h-5 text-green-600" />
+                    <span className="font-medium">Wind</span>
                   </div>
-                  <div className="text-lg font-bold text-green-700">
+                  <div className="text-2xl font-bold text-green-700">
                     {dangerAnalysis.environmental_data.wind_speed_knots.toFixed(1)} kts
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-purple-50 border border-purple-200">
-                  <div className="flex items-center gap-2">
-                    <Waves className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-medium">Current</span>
+                <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Waves className="w-5 h-5 text-purple-600" />
+                    <span className="font-medium">Current</span>
                   </div>
-                  <div className="text-lg font-bold text-purple-700">
+                  <div className="text-2xl font-bold text-purple-700">
                     {dangerAnalysis.environmental_data.ocean_current_knots.toFixed(1)} kts
                   </div>
                 </div>
 
-                <div className="p-3 rounded-lg bg-orange-50 border border-orange-200">
-                  <div className="flex items-center gap-2">
-                    <Anchor className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-medium">Rogue Wave</span>
+                <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Anchor className="w-5 h-5 text-orange-600" />
+                    <span className="font-medium">Rogue Wave</span>
                   </div>
-                  <div className="text-lg font-bold text-orange-700">
+                  <div className="text-2xl font-bold text-orange-700">
                     {Math.round(dangerAnalysis.risk_analysis.rogue_wave_probability * 100)}%
                   </div>
                 </div>
@@ -403,11 +339,11 @@ const MaritimeSafety = () => {
 
               {/* Safety Recommendations */}
               {dangerAnalysis.recommendations && dangerAnalysis.recommendations.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-medium text-sm mb-2">🛡️ Safety Recommendations:</h4>
-                  <div className="space-y-1">
-                    {dangerAnalysis.recommendations.slice(0, 3).map((recommendation, index) => (
-                      <div key={index} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                <div className="mt-6">
+                  <h4 className="font-semibold mb-3">🛡️ Safety Recommendations:</h4>
+                  <div className="space-y-2">
+                    {dangerAnalysis.recommendations.slice(0, 4).map((recommendation, index) => (
+                      <div key={index} className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
                         {recommendation}
                       </div>
                     ))}
@@ -419,55 +355,30 @@ const MaritimeSafety = () => {
         </div>
       )}
 
-      {/* Location History */}
+      {/* Location Tracking Status */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-base">
+        <CardHeader>
+          <CardTitle className="flex items-center">
             <Clock className="w-5 h-5 mr-2 text-blue-600" />
-            Location Tracking Status
+            Tracking Status
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Live Tracking: 
+              <p className="font-semibold">Live GPS Tracking: 
                 <Badge variant={autoRefresh ? "default" : "secondary"} className="ml-2">
                   {autoRefresh ? "Active" : "Paused"}
                 </Badge>
               </p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1">
                 GPS accuracy: High | Update frequency: 30 seconds
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-500">Last sync:</p>
-              <p className="font-medium">{lastUpdate?.toLocaleTimeString()}</p>
+              <p className="text-gray-500">Last sync:</p>
+              <p className="font-semibold">{lastUpdate?.toLocaleTimeString()}</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Emergency Actions */}
-      <Card className="border-red-200 bg-red-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-base text-red-800">
-            <PhoneCall className="w-5 h-5 mr-2" />
-            Emergency Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button className="bg-red-600 hover:bg-red-700 w-full">
-              <PhoneCall className="w-4 h-4 mr-2" />
-              Call Coast Guard
-            </Button>
-            <Button variant="outline" className="border-red-300 text-red-700 w-full">
-              <Radio className="w-4 h-4 mr-2" />
-              Emergency Radio
-            </Button>
-          </div>
-          <div className="mt-3 text-xs text-red-700">
-            <strong>Emergency Contacts:</strong> Coast Guard: 1554 | Port Control: 022-22661504
           </div>
         </CardContent>
       </Card>
