@@ -28,55 +28,116 @@ const FishForecast = () => {
     longitude: 72.8777
   });
   const [activeTab, setActiveTab] = useState('zones');
+  const [locationPermission, setLocationPermission] = useState('prompt'); // 'prompt', 'granted', 'denied'
+  const [locationError, setLocationError] = useState(null);
 
   useEffect(() => {
     getCurrentLocation();
   }, []);
 
   const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          });
-          setLoading(false);
-          fetchFishingZones(position.coords.latitude, position.coords.longitude);
-        },
-        (error) => {
-          console.warn('Geolocation error:', error);
-          setLoading(false);
-          // Use default Mumbai coordinates
-          fetchFishingZones(19.0760, 72.8777);
-        }
-      );
-    } else {
-      // Use default location
-      fetchFishingZones(19.0760, 72.8777);
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported by this browser');
+      setLocationPermission('denied');
+      setLocationError('Geolocation is not supported by this browser');
+      // Fallback to Mumbai coordinates
+      const fallbackLat = 19.0821;
+      const fallbackLon = 72.8416;
+      setLocation({ latitude: fallbackLat, longitude: fallbackLon });
+      fetchFishingZones(fallbackLat, fallbackLon);
+      return;
     }
+
+    setLoading(true);
+    setLocationError(null);
+    console.log('🗺️ Requesting user location...');
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        
+        console.log('✅ User location obtained:', userLat, userLon);
+        
+        setLocation({
+          latitude: userLat,
+          longitude: userLon
+        });
+        
+        setLocationPermission('granted');
+        setLocationError(null);
+        
+        // Fetch fishing zones for user's actual location
+        fetchFishingZones(userLat, userLon);
+      },
+      (error) => {
+        console.error('❌ Error getting location:', error);
+        
+        let errorMessage = 'Unable to get your location';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please allow location access to get personalized fishing forecasts.';
+            setLocationPermission('denied');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable.';
+            setLocationPermission('denied');
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out.';
+            setLocationPermission('denied');
+            break;
+          default:
+            errorMessage = 'An unknown error occurred while retrieving location.';
+            setLocationPermission('denied');
+            break;
+        }
+        
+        setLocationError(errorMessage);
+        
+        // Fallback to Mumbai coordinates on error
+        const fallbackLat = 19.0821;
+        const fallbackLon = 72.8416;
+        
+        console.log('🔄 Using fallback Mumbai coordinates:', fallbackLat, fallbackLon);
+        
+        setLocation({
+          latitude: fallbackLat,
+          longitude: fallbackLon
+        });
+        
+        fetchFishingZones(fallbackLat, fallbackLon);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
   };
 
   const generateMockFishingZones = (lat, lon) => {
-    // FIXED ZONES - Always return the exact same pattern, no randomness
-    const fixedZones = [
-      // Green zones (Excellent) - West and Northwest - FIXED POSITIONS
+    console.log('🎯 Generating exact heatmap zones as per provided image around user location:', lat, lon);
+    
+    // EXACT ZONES from the provided image - positioned around Mumbai area
+    // These coordinates match the exact heatmap locations shown in your image
+    const exactZones = [
+      // Green zones (Excellent) - West side of Mumbai in Arabian Sea
       {
-        lat: lat - 0.025, // Always same offset
-        lon: lon - 0.035,
-        score: 0.92, // Fixed score
+        lat: 19.0260,
+        lon: 72.7700,
+        score: 0.92,
         sst: 0.88,
         chlorophyll: 0.95,
         wind: 0.85,
         current: 0.89,
         quality: 'excellent',
         color: '#22c55e',
-        location_name: 'Zone A - Excellent',
-        distance_from_user: 4.2, // Fixed distance
-        depth: 35, // Fixed depth
+        location_name: 'Zone A - Excellent (Arabian Sea West)',
+        distance_from_user: 4.2,
+        depth: 35,
         fish_probability: {
-          pomfret: 0.89, // Fixed probabilities
+          pomfret: 0.89,
           mackerel: 0.94,
           sardine: 0.78,
           tuna: 0.67,
@@ -84,8 +145,8 @@ const FishForecast = () => {
         }
       },
       {
-        lat: lat - 0.065,
-        lon: lon - 0.025,
+        lat: 18.9400,
+        lon: 72.7900,
         score: 0.87,
         sst: 0.84,
         chlorophyll: 0.91,
@@ -93,7 +154,7 @@ const FishForecast = () => {
         current: 0.86,
         quality: 'excellent',
         color: '#22c55e',
-        location_name: 'Zone B - Excellent',
+        location_name: 'Zone B - Excellent (Bay Southwest)',
         distance_from_user: 7.8,
         depth: 28,
         fish_probability: {
@@ -105,8 +166,8 @@ const FishForecast = () => {
         }
       },
       {
-        lat: lat - 0.045,
-        lon: lon - 0.055,
+        lat: 18.8700,
+        lon: 72.7600,
         score: 0.84,
         sst: 0.81,
         chlorophyll: 0.88,
@@ -114,7 +175,7 @@ const FishForecast = () => {
         current: 0.83,
         quality: 'excellent',
         color: '#22c55e',
-        location_name: 'Zone C - Excellent', 
+        location_name: 'Zone C - Excellent (Coastal South)',
         distance_from_user: 6.1,
         depth: 42,
         fish_probability: {
@@ -125,10 +186,10 @@ const FishForecast = () => {
           kingfish: 0.65
         }
       },
-      // Yellow zones (Good) - North and East - FIXED POSITIONS  
+      // Yellow zones (Good) - Center and East areas
       {
-        lat: lat + 0.035,
-        lon: lon - 0.015,
+        lat: 19.1100,
+        lon: 72.8700,
         score: 0.72,
         sst: 0.71,
         chlorophyll: 0.75,
@@ -136,7 +197,7 @@ const FishForecast = () => {
         current: 0.73,
         quality: 'good',
         color: '#eab308',
-        location_name: 'Zone D - Good',
+        location_name: 'Zone D - Good (North Thane)',
         distance_from_user: 3.9,
         depth: 52,
         fish_probability: {
@@ -148,8 +209,8 @@ const FishForecast = () => {
         }
       },
       {
-        lat: lat + 0.055,
-        lon: lon + 0.025,
+        lat: 19.0100,
+        lon: 72.9400,
         score: 0.68,
         sst: 0.67,
         chlorophyll: 0.71,
@@ -157,7 +218,7 @@ const FishForecast = () => {
         current: 0.69,
         quality: 'good',
         color: '#eab308',
-        location_name: 'Zone E - Good',
+        location_name: 'Zone E - Good (Navi Mumbai East)',
         distance_from_user: 6.7,
         depth: 38,
         fish_probability: {
@@ -168,10 +229,52 @@ const FishForecast = () => {
           kingfish: 0.51
         }
       },
-      // Red zones (Poor) - Southeast - FIXED POSITIONS
       {
-        lat: lat + 0.025,
-        lon: lon + 0.045,
+        lat: 19.0500,
+        lon: 72.9000,
+        score: 0.65,
+        sst: 0.64,
+        chlorophyll: 0.68,
+        wind: 0.62,
+        current: 0.66,
+        quality: 'good',
+        color: '#eab308',
+        location_name: 'Zone F - Good (Central Bay)',
+        distance_from_user: 2.3,
+        depth: 45,
+        fish_probability: {
+          pomfret: 0.63,
+          mackerel: 0.68,
+          sardine: 0.55,
+          tuna: 0.41,
+          kingfish: 0.48
+        }
+      },
+      {
+        lat: 18.9800,
+        lon: 72.8500,
+        score: 0.62,
+        sst: 0.61,
+        chlorophyll: 0.65,
+        wind: 0.59,
+        current: 0.63,
+        quality: 'good',
+        color: '#eab308',
+        location_name: 'Zone G - Good (South Bay)',
+        distance_from_user: 5.4,
+        depth: 41,
+        fish_probability: {
+          pomfret: 0.60,
+          mackerel: 0.65,
+          sardine: 0.52,
+          tuna: 0.38,
+          kingfish: 0.45
+        }
+      },
+      // Red zones (Poor) - Northeast and Southeast areas
+      {
+        lat: 19.1600,
+        lon: 73.0300,
         score: 0.38,
         sst: 0.42,
         chlorophyll: 0.35,
@@ -179,7 +282,7 @@ const FishForecast = () => {
         current: 0.36,
         quality: 'poor',
         color: '#ef4444',
-        location_name: 'Zone F - Poor',
+        location_name: 'Zone H - Poor (Ambernath Area)',
         distance_from_user: 5.3,
         depth: 65,
         fish_probability: {
@@ -191,8 +294,8 @@ const FishForecast = () => {
         }
       },
       {
-        lat: lat + 0.015,
-        lon: lon + 0.065,
+        lat: 18.9100,
+        lon: 73.0600,
         score: 0.34,
         sst: 0.38,
         chlorophyll: 0.31,
@@ -200,7 +303,7 @@ const FishForecast = () => {
         current: 0.32,
         quality: 'poor',
         color: '#ef4444',
-        location_name: 'Zone G - Poor',
+        location_name: 'Zone I - Poor (Karjat Area)',
         distance_from_user: 7.2,
         depth: 58,
         fish_probability: {
@@ -210,20 +313,103 @@ const FishForecast = () => {
           tuna: 0.21,
           kingfish: 0.24
         }
+      },
+      {
+        lat: 19.0800,
+        lon: 73.0100,
+        score: 0.31,
+        sst: 0.35,
+        chlorophyll: 0.28,
+        wind: 0.34,
+        current: 0.29,
+        quality: 'poor',
+        color: '#ef4444',
+        location_name: 'Zone J - Poor (Kulgaon Area)',
+        distance_from_user: 4.8,
+        depth: 62,
+        fish_probability: {
+          pomfret: 0.28,
+          mackerel: 0.33,
+          sardine: 0.25,
+          tuna: 0.18,
+          kingfish: 0.21
+        }
       }
     ];
 
-    // Always return the exact same zones - NO RANDOMNESS, NO SORTING CHANGES
-    console.log('🎯 FIXED ZONES: Returning identical pattern every time');
-    return fixedZones; // Return as-is, same order every time
+    // Calculate distances from user's actual location (keeping live location unchanged)
+    const zonesWithDistance = exactZones.map(zone => {
+      const userDistance = Math.sqrt(
+        Math.pow(zone.lat - lat, 2) + Math.pow(zone.lon - lon, 2)
+      ) * 111; // Convert to km
+      
+      return {
+        ...zone,
+        distance_from_user: Math.round(userDistance * 10) / 10
+      };
+    });
+    
+    // Sort by score (highest first) - keeping exact image order
+    zonesWithDistance.sort((a, b) => b.score - a.score);
+    
+    console.log('✅ Generated exact heatmap zones as per provided image');
+    return zonesWithDistance;
   };
 
   const fetchFishingZones = async (lat, lon) => {
     setLoading(true);
     try {
-      // Always use consistent mock data but with live location
-      console.log('🎣 Using consistent fish forecast data with live location:', lat, lon);
+      console.log('🎣 Fetching fishing zones for location:', lat, lon);
       
+      // Try to call the backend API first
+      try {
+        const response = await apiService.post('/predict/fishing-zones', {
+          latitude: lat,
+          longitude: lon,
+          radius_km: 15
+        });
+        
+        if (response.data && response.data.best_zones) {
+          console.log('✅ Backend API response received');
+          
+          const processedData = {
+            best_zones: response.data.best_zones.map(zone => ({
+              ...zone,
+              // Ensure compatibility with existing map component
+              latitude: zone.lat,
+              longitude: zone.lon,
+              fishing_score: zone.score,
+              environmental_data: zone.ml_environmental_data || {
+                sea_surface_temp_c: 26.5 + (zone.sst - 0.5) * 4,
+                wind_speed_knots: 10 + (zone.wind - 0.5) * 10,
+                ocean_current_knots: 1.5 + (zone.current - 0.5) * 3,
+                chlorophyll_mg_m3: zone.chlorophyll * 2
+              }
+            })),
+            zones: response.data.best_zones,
+            user_location: response.data.user_location || { 
+              name: `Location (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`,
+              lat: lat,
+              lon: lon
+            },
+            prediction_details: response.data.prediction_details || {
+              model_info: "🤖 AI-Powered ML Models",
+              models_used: ["Wind Speed ML", "Ocean Current ML", "SST ML", "Chlorophyll ML"],
+              ml_integration: "Real environmental predictions",
+              prediction_accuracy: "High confidence with ML model outputs"
+            }
+          };
+          
+          setForecastData(processedData);
+          console.log('✅ Backend fish forecast loaded successfully');
+          return;
+        }
+      } catch (apiError) {
+        console.warn('⚠️ Backend API failed, using mock data:', apiError.message);
+      }
+      
+      // Fallback to mock data if API fails
+      console.log('🔄 Using mock fishing zones for location:', lat, lon);
       const mockZones = generateMockFishingZones(lat, lon);
       
       const processedData = {
@@ -234,37 +420,42 @@ const FishForecast = () => {
           longitude: zone.lon,
           fishing_score: zone.score,
           environmental_data: {
-            sea_surface_temp_c: 26.5 + (zone.sst - 0.5) * 4, // Convert to realistic temperature
-            wind_speed_knots: 10 + (zone.wind - 0.5) * 10,   // Convert to realistic wind
-            ocean_current_knots: 1.5 + (zone.current - 0.5) * 3, // Convert to realistic current
-            chlorophyll_mg_m3: zone.chlorophyll * 2 // Convert to realistic chlorophyll
+            sea_surface_temp_c: 26.5 + (zone.sst - 0.5) * 4,
+            wind_speed_knots: 10 + (zone.wind - 0.5) * 10,
+            ocean_current_knots: 1.5 + (zone.current - 0.5) * 3,
+            chlorophyll_mg_m3: zone.chlorophyll * 2
           }
         })),
-        zones: mockZones, // Keep zones for compatibility
+        zones: mockZones,
         user_location: { 
-          name: `Live Location (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`,
+          name: `Your Location (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`,
           lat: lat,
           lon: lon
         },
         prediction_details: {
-          model_info: "🎯 Consistent Forecast Model - Optimized fishing zones",
-          models_used: ["Consistent Zone Pattern", "Live Location Tracking"],
-          ml_integration: "Reliable fishing zone predictions with live GPS positioning",
-          prediction_accuracy: "High consistency with proven fishing patterns"
+          model_info: "🎯 Mock Forecast Model - Based on Your Location",
+          models_used: ["Simulated Environmental Data"],
+          ml_integration: "Location-based fishing zone simulation",
+          prediction_accuracy: "Simulated data for demonstration"
         }
       };
       
       setForecastData(processedData);
-      console.log('✅ Consistent fish forecast loaded successfully');
+      console.log('✅ Mock fish forecast loaded successfully');
         
     } catch (error) {
       console.error('Error in fish forecasting:', error);
-      // Even on error, use consistent mock data
+      // Even on error, use mock data
       const mockZones = generateMockFishingZones(lat, lon);
+      
       setForecastData({ 
         best_zones: mockZones,
         zones: mockZones, 
-        user_location: { name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}` } 
+        user_location: { 
+          name: `Your Location (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`,
+          lat: lat,
+          lon: lon
+        } 
       });
     } finally {
       setLoading(false);
@@ -358,6 +549,26 @@ const FishForecast = () => {
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription>
             Analyzing environmental conditions and predicting fishing zones...
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {locationError && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <MapPin className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            <strong>Location Access Issue:</strong> {locationError}
+            <br />
+            <span className="text-sm">Using default location for demonstration. Click "Use My Location" to try again.</span>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {locationPermission === 'granted' && (
+        <Alert className="border-green-200 bg-green-50">
+          <MapPin className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            <strong>Location Access Granted:</strong> Showing personalized fishing forecasts for your location.
           </AlertDescription>
         </Alert>
       )}
