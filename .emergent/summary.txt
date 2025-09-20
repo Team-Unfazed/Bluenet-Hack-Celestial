@@ -1,69 +1,104 @@
 <analysis>
-The previous AI engineer successfully initiated the BlueNet web application development, moving from zero to a significant MVP. Initially, the engineer focused on building out the core frontend and backend structure based on the detailed product requirements, including the landing page, authentication, dashboard, and placeholder AI features. Key achievements included integrating RAG for the AI Assistant, setting up the backend API, and implementing basic UI components with Shadcn.
-
-However, after an initial declaration of complete implementation (Message 143), implicit user feedback or internal validation revealed critical flaws. The engineer then correctly identified and prioritized fixing inaccurate Mandi Recommendation logic, improper Hugging Face model integration for fish forecasting, and a non-functional Mapbox implementation. The current work revolves around systematically addressing these critical issues, particularly rectifying the Mapbox integration with  and configuring the API key, and updating the related frontend components. The engineer was about to restart services and test these fixes when the trajectory ended.
+The AI engineer successfully transformed the BlueNet application from an initial MVP into a robust, mobile-first maritime safety and fish forecasting platform. Initial efforts fixed Mapbox integration errors and implemented a full authentication system. Subsequently, the focus shifted to core user requirements: integrating real ML models for dangerous currents and rogue waves, enhancing fish forecasting, adding a catch logger with image classification, offline data management, and multi-language support. User feedback iteratively guided refinements, especially concerning map behavior (from full vessel tracking to live location only, then back, then simplified again) and fish forecast data consistency. The latest modifications involve streamlining the map for live location only, ensuring catch logs are saved offline, and making fish forecast output consistently identical.
 </analysis>
 
 <product_requirements>
-The BlueNet project aims to develop a professional, clean, and minimal web application for local fishermen and policymakers in India, focusing on AI-powered fishing assistance. Key features include: a responsive landing page with Fish Smarter. Stay Safer. Earn More. tagline, multilingual support, and login/register options. A role-based dashboard for Fishermen includes AI Fish Forecasting (using GPS, 4 Hugging Face models for environmental signals, and Mapbox for heatmaps/recommendations), Fish Market Price Prediction (using provided ML code and dataset to recommend best mandis), Catch Compliance, Disaster & Safety Alerts (with geofencing), Community Communication, AI Assistant (RAG pipeline with , , , , and user's Gemini API key), and a Start Journey feature to track live location, calculate fuel consumption (with custom efficiency input), and integrate geofencing. The Policymaker Dashboard provides compliance stats, risk zones, and sustainability insights. The design emphasizes ocean-themed colors (white/neutral/blue/teal), rounded UI cards, Shadcn UI components, responsive design, and an offline-first UX. All backend API calls must use the  prefix via FastAPI and MongoDB.
+The BlueNet project aims to be a professional, mobile-first, multilingual web and mobile application for Indian fishermen and policymakers, powered by AI for maritime safety and fishing assistance. Key features include a responsive landing page, role-based dashboards, and multilingual support. For fishermen, features include AI Fish Forecasting (using GPS, 4 ML models for environmental signals, and interactive maps), Fish Market Price Prediction, Catch Compliance (with image classification), Disaster & Safety Alerts (with geofencing), Community Communication, AI Assistant (RAG pipeline), and Journey Tracking (live location, fuel consumption, geofencing). Policymakers get compliance stats and sustainability insights.
+
+Recent, critical updates requested by the user include:
+1.  **Maritime Traffic Data – Collision Avoidance**: Integrate MarineTraffic API to track live vessel locations, provide geo-fencing alerts (5km warning, 2km collision risk), and show a visual map UI with safe distance rings. This must run real-time in the background on mobile.
+2.  **Dangerous Ocean Currents & Rogue Waves**: Build a prediction pipeline using , , , and a large SST model from Hugging Face. Detect dangerous currents and predict rogue waves based on environmental anomalies, showing risk levels (Safe, Caution, Danger) with real-time alerts.
+3.  **Fish Forecast (AI Prediction)**: Use the four ML models to forecast fish presence and recommend fishing zones with simple visual maps and fisherman-friendly output. This was later requested to show consistent mock data with live location.
+4.  **Image Classification Model Update**: Replace an old  model with  for fish species detection.
+5.  **Log Catch System**: Fix the existing Log Catch button, allow logging species, size, weight, location, and time. Store data in the database and support offline mode with local saving and automatic syncing. This was further requested to save data to offline storage.
+6.  **Offline Data Export**: Provide a Download Offline Report feature in a readable, multilingual text format.
+7.  **UI/UX**: Mobile-first, fully responsive design, multilingual support for at least 5 regional languages, toggle for language selection, and real-time push notifications working in the background.
+8.  **Platform**: React frontend, FastAPI/Flask backend, MongoDB/PostgreSQL database, Docker deployment, React Native/Capacitor for mobile app.
+
+The latest user requests focused on:
+*   Maritime Safety should *only* track the user's live location, *not* other vessels, and embed a specific VesselFinder map code. This was later reversed to track all vessels, then back to only live location with a simplified map approach to avoid React DOM errors.
+*   Fish Forecast should *always* show the *exact same image/pattern* when refreshed, along with the live location.
+*   Catch logs should be saved and updated in the offline data.
 </product_requirements>
 
 <key_technical_concepts>
-- **Frontend**: React.js, TailwindCSS, Shadcn UI, React Router DOM, Axios, Mapbox GL JS, Recharts.
-- **Backend**: FastAPI, MongoDB (Motor), Pydantic, Python-dotenv, Sentence Transformers, FAISS, Pandas, NumPy, scikit-learn, Hugging Face Inference API, Gemini API, Shapely, Geopy, Flask (for geofencing ).
+- **Frontend**: React.js, TailwindCSS, Shadcn UI, React Router DOM, Axios, , Recharts, .
+- **Backend**: FastAPI, MongoDB (Motor), Pydantic, Python-dotenv, Sentence Transformers, FAISS, Pandas, NumPy, scikit-learn, Hugging Face Inference API, Gemini API, Shapely, Geopy, Flask, , , , .
 - **Deployment**: Kubernetes container environment, Supervisorctl.
-- **Data Handling**: RAG (Retrieval Augmented Generation), Vector Databases (FAISS), JWT/OAuth2.
+- **Data Handling**: RAG, Vector Databases (FAISS), JWT/OAuth2, ML Models (, ).
+- **External Integrations**: Mapbox, Hugging Face Hub (for SST model), MarineTraffic API (initially planned, then simplified), VesselFinder (briefly attempted for map embed).
 </key_technical_concepts>
 
 <code_architecture>
 
-- **/app/backend/server.py**: Main FastAPI application.
-  - **Importance**: Orchestrates all backend API endpoints, handles authentication, integrates AI/ML logic for fish forecasting, mandi recommendations, AI assistant (RAG), and journey tracking with geofencing. It serves as the central hub for all data processing and external API interactions.
-  - **Changes**: Significantly rewritten to incorporate all required API routes (, , , , , ). It was updated to correctly load RAG documents and Mandi data, and to integrate the Hugging Face API logic for fish forecasting.  variables for API keys are configured and used.
-- **/app/backend/.env**: Environment variables for backend.
-  - **Importance**: Stores sensitive API keys and configuration like , , , , Twilio credentials for geofencing calls.
-  - **Changes**: Populated with various API keys and credentials required for third-party integrations (Hugging Face, Mapbox, Gemini, Twilio).
-- **/app/backend/requirements.txt**: Python dependencies.
-  - **Importance**: Manages all Python packages required for the FastAPI backend, including machine learning, data processing, and web frameworks.
-  - **Changes**: Updated to include new dependencies such as , , , , , , , , , etc.
-- **/app/frontend/src/App.js**: Main React application component.
-  - **Importance**: Sets up the main routing structure using React Router DOM, rendering , , and  components based on the URL.
-  - **Changes**: Configured with routes for different sections of the application, including the public landing page and the protected dashboard.
-- **/app/frontend/src/App.css & /app/frontend/src/index.css**: Global CSS styles.
-  - **Importance**: Define the overall visual theme, typography, and layout.  also imports .
-  - **Changes**: Implemented professional white/neutral color scheme with ocean-inspired accents, custom fonts (Playfair Display, Inter), and general TailwindCSS utility classes.  was imported for Mapbox specific styling.
-- **/app/frontend/src/components/Dashboard.js**: Dashboard container.
-  - **Importance**: Implements the tab-based navigation for Fishermen and Policymaker dashboards, dynamically rendering feature components.
-  - **Changes**: Created to structure the main authenticated view, importing , , , , , and  components.
-- **/app/frontend/src/components/features/FishForecast.js**: AI Fish Forecasting feature.
-  - **Importance**: Displays the AI-predicted fishing zones, environmental data, and integrates an interactive map.
-  - **Changes**: Initial creation included a syntax error which was later fixed. Updated to use the new  for displaying fishing zones and passing Mapbox API key.
-- **/app/frontend/src/components/features/JourneyTracking.js**: Journey tracking feature.
-  - **Importance**: Manages live GPS tracking, fuel consumption calculation, and displays the journey on a map with geofencing capabilities.
-  - **Changes**: Created to handle journey logic. Updated to use the new  for displaying live location and journey path.
-- **/app/frontend/src/components/maps/MapComponent.js**: Reusable Mapbox component.
-  - **Importance**: Provides a generic wrapper for Mapbox GL JS, making it reusable across different features needing a map.
-  - **Changes**: Created to encapsulate Mapbox  and  components, using . This was subject to multiple revisions to fix import issues and ensure correct  version compatibility and usage. It accepts , , , , and children as props.
-- **/app/frontend/.env**: Environment variables for frontend.
-  - **Importance**: Stores  and  for frontend API calls and map integration.
-  - **Changes**: Populated with .
-- **/app/frontend/package.json**: Node.js dependencies.
-  - **Importance**: Manages all JavaScript libraries for the React frontend.
-  - **Changes**: Updated to include , , and  for map and chart integrations.
-
+- ****: Main FastAPI application handling all API routes.
+    - **Importance**: Central backend logic, authentication, AI/ML model integration (fish forecasting, mandi recommendations, AI assistant, maritime safety), journey tracking, and geofencing.
+    - **Changes**: Major additions for authentication (registration, login, JWT), integration of new ML models (wind, current, SST, chlorophyll for maritime safety), a new  endpoint, and  endpoint. The fish forecasting logic was updated to use the ML models and later to provide consistent mock data.
+- ****: Backend environment variables.
+    - **Importance**: Stores API keys (, , ), , and other sensitive configurations.
+    - **Changes**: Updated with  and  provided by the user.
+- ****: Python dependencies for the backend.
+    - **Importance**: Ensures all necessary Python packages are installed for the backend to run.
+    - **Changes**: Added , , , and other dependencies as new features and models were integrated.
+- ** (NEW)**: Contains the core logic for loading ML models and performing maritime safety predictions.
+    - **Importance**: Centralizes the ML model loading (wind, current, SST, chlorophyll) and the  function, which combines these models to determine risk levels and rogue wave probabilities.
+    - **Changes**: Newly created file to encapsulate the maritime safety logic and model inference.
+- ****: Main React router configuration.
+    - **Importance**: Defines the application's routing structure, rendering key components like , , and .
+    - **Changes**: Routes for authentication and dashboard were implicitly handled through  and  components.
+- ** & **: Global styles.
+    - **Importance**: Defines the visual theme and styling, including Mapbox specific styles.
+    - **Changes**:  was imported.  was adapted for responsive design.
+- ****: Public facing page.
+    - **Importance**: Initial user entry point, contains the login/registration modal.
+    - **Changes**: Authentication logic was updated from mock to real backend API calls. A  was added to its header section.
+- ****: Authenticated user dashboard.
+    - **Importance**: Organizes the main features into tabs for fishermen and policymakers.
+    - **Changes**: Updated to include new feature tabs for , , and . The tab rendering logic and grid layout were adjusted for responsiveness.
+- ****: AI Fish Forecasting feature.
+    - **Importance**: Displays predicted fishing zones and environmental data.
+    - **Changes**: Initially had compilation errors related to . Updated to use . Later modified to use mock environmental prediction values, then integrated backend ML predictions, and finally was updated to consistently show a fixed pattern of mock data with live location. Data structure access ( vs ) was fixed.
+- ****: Journey tracking feature.
+    - **Importance**: Manages GPS tracking and displays the journey on a map.
+    - **Changes**: Updated to utilize .
+- ** (NEW)**: Component for logging fish catches.
+    - **Importance**: Enables fishermen to log catch details, upload images for classification, and record location/time. Supports camera integration.
+    - **Changes**: Newly created. Implemented local storage for logs and saving to .
+- ** (NEW)**: Component for offline data management.
+    - **Importance**: Manages local caching of data, hourly sync, and data export.
+    - **Changes**: Newly created.
+- ** (NEW)**: Component for maritime safety features.
+    - **Importance**: Displays collision avoidance alerts, dangerous current/rogue wave predictions, and a map for tracking.
+    - **Changes**: Newly created. Initially showed all vessels from MarineTraffic, then changed to only show user's live location with VesselFinder, then a simplified React-friendly map for live location only to avoid DOM errors. Alerts for collision risk and vessels nearby are displayed.
+- ****: Reusable Mapbox component.
+    - **Importance**: Generic wrapper for .
+    - **Changes**: Fixed duplicate  declaration and JSX parsing errors. Configured to accept  as a prop.
+- ** (NEW)**: Utility for multilingual support.
+    - **Importance**: Stores translations for various languages (English, Hindi, Marathi, etc.).
+    - **Changes**: Newly created.
+- ** (NEW)**: Component for language selection.
+    - **Importance**: Provides a UI element for users to switch between supported languages.
+    - **Changes**: Newly created and integrated into  and  headers.
+- ****: Frontend environment variables.
+    - **Importance**: Stores  and .
+    - **Changes**:  was added.
+- ****: Node.js dependencies for the frontend.
+    - **Importance**: Manages all JavaScript libraries for the React frontend.
+    - **Changes**: , ,  were added.
 </code_architecture>
 
 <pending_tasks>
-- Fully resolve and verify the Mapbox integration to ensure interactive maps with correct location names.
-- Verify the accuracy and full integration of the Hugging Face models for fish forecasting using the specified API key and repo names.
-- Integrate the  model for Fish Species Detection and Catch Compliance functionality.
-- Implement real-time notifications for disaster and safety alerts.
+- Test the latest changes to the  (saving to offline data) and  (consistent image/pattern).
 </pending_tasks>
 
 <current_work>
-Immediately before this summary request, the AI engineer was actively engaged in fixing critical implementation issues that arose after an initial completion claim. The primary focus was on rectifying the Mapbox integration for interactive maps, ensuring the correct use of  and the provided Mapbox API key. This involved modifying  to properly render the map and markers, and updating  and  to utilize this  with the Mapbox token. The engineer also aimed to address inaccuracies in the Mandi Recommendation and Hugging Face model integrations, starting with data replacement and model logic fixes in the backend. The last recorded action was the intent to restart services and test these recently applied fixes, indicating the map integration was the immediate, unfinished task.
+Immediately before this summary request, the AI engineer was addressing two specific user requirements:
+1.  **Catch Logger to Save to Offline Data**: The  component was being updated to ensure that logged fish catches are persistently stored and reflected in the offline data management system.
+2.  **Fish Forecast Consistent Pattern**: The  feature was being modified to ensure that upon refresh, it consistently displays the *exact same visual pattern* of fishing zones and environmental signals, along with the user's live location, as requested by the user. This involves overriding dynamic ML predictions with a fixed, visually appealing mock dataset.
+
+The last action recorded was restarting the frontend service to apply these two latest fixes (). The system is currently in a state where the frontend has been restarted after implementing these changes, and the next logical step is to verify their functionality.
 </current_work>
 
 <optional_next_step>
-Restart the frontend and backend services to apply the latest Mapbox integration fixes.
+Restart the frontend to apply the changes, then test Catch Logger's offline data saving and Fish Forecast's consistent display.
 </optional_next_step>
