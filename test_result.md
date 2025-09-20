@@ -366,7 +366,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Authentication System Frontend"
+    - "CatchLogger History Display"
+    - "FishForecast Consistent Pattern"
   stuck_tasks:
     - "Authentication System Frontend"
   test_all: false
