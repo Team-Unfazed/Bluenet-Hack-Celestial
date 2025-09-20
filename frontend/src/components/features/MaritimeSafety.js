@@ -79,94 +79,98 @@ const MaritimeSafety = () => {
   };
 
   const initializeInteractiveMap = (lat, lon) => {
-    // Initialize VesselFinder interactive map with ONLY user's location
+    // Create a simple interactive map representation for live location
     if (mapRef.current) {
-      // Clear existing content
-      mapRef.current.innerHTML = '';
-      
-      // Create a container div for the map
-      const mapContainer = document.createElement('div');
-      mapContainer.id = `vesselfinder-map-${Date.now()}`;
-      mapContainer.style.width = '100%';
-      mapContainer.style.height = '300px';
-      
-      // Add the container to the ref
-      mapRef.current.appendChild(mapContainer);
-      
-      // Add VesselFinder configuration as global variables
-      window.vesselfinderConfig = {
-        width: "100%",
-        height: "300",
-        latitude: lat.toFixed(6),
-        longitude: lon.toFixed(6),
-        zoom: "12",
-        names: false,
-        mmsi: "",
-        imo: "",
-        show_track: false,
-        fleet: "", // Empty fleet - no vessel tracking
-        fleet_name: "",
-        fleet_timespan: "0"
-      };
-      
-      // Create and load the VesselFinder script
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.onload = () => {
-        console.log(`🗺️ Interactive map loaded for location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
-      };
-      script.onerror = () => {
-        console.error('Failed to load VesselFinder map');
-        // Show fallback message
-        mapContainer.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 300px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
-            <div style="text-align: center; color: #0369a1;">
-              <div style="font-size: 24px; margin-bottom: 8px;">🗺️</div>
-              <div style="font-weight: bold;">Interactive Map</div>
-              <div style="font-size: 14px; margin-top: 4px;">Location: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E</div>
-              <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Live tracking enabled</div>
-            </div>
+      mapRef.current.innerHTML = `
+        <div style="
+          width: 100%; 
+          height: 300px; 
+          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+          border-radius: 8px;
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <!-- Ocean waves animation -->
+          <div style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 20px,
+              rgba(255,255,255,0.1) 20px,
+              rgba(255,255,255,0.1) 40px
+            );
+            animation: waves 3s linear infinite;
+          "></div>
+          
+          <!-- Your location marker -->
+          <div style="
+            position: absolute;
+            z-index: 10;
+            background: #ef4444;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+          "></div>
+          
+          <!-- Location info overlay -->
+          <div style="
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+          ">
+            🧭 Live Location: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E
+            <br>
+            📡 GPS Tracking Active • Auto-refresh every 30s
           </div>
-        `;
-      };
-      
-      // Set up the configuration script content
-      script.innerHTML = `
-        // Map appearance
-        var width="100%";
-        var height="300";
-        var latitude="${lat.toFixed(6)}";
-        var longitude="${lon.toFixed(6)}";
-        var zoom="12";
-        var names=false;
-
-        // Single ship tracking - DISABLED
-        var mmsi="";
-        var imo="";
-        var show_track=false;
-
-        // Fleet tracking - DISABLED (only show user location)
-        var fleet="";
-        var fleet_name="";
-        var fleet_timespan="0";
+          
+          <!-- Coordinate grid lines -->
+          <div style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+          "></div>
+        </div>
+        
+        <style>
+          @keyframes waves {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(40px); }
+          }
+          
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+          }
+        </style>
       `;
       
-      // Append to head to avoid React DOM conflicts
-      document.head.appendChild(script);
-      
-      // Load the VesselFinder script after configuration
-      setTimeout(() => {
-        const mapScript = document.createElement('script');
-        mapScript.type = 'text/javascript';
-        mapScript.src = 'https://www.vesselfinder.com/aismap.js';
-        mapScript.onload = () => {
-          console.log('VesselFinder script loaded successfully');
-        };
-        mapScript.onerror = () => {
-          console.error('Failed to load VesselFinder script');
-        };
-        document.head.appendChild(mapScript);
-      }, 100);
+      console.log(`🗺️ Live location map initialized: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
     }
   };
 
