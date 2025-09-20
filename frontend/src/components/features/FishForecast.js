@@ -259,7 +259,11 @@ const FishForecast = () => {
       console.error('Error in fish forecasting:', error);
       // Even on error, use consistent mock data
       const mockZones = generateMockFishingZones(lat, lon);
-      setForecastData({ zones: mockZones, user_location: { name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}` } });
+      setForecastData({ 
+        best_zones: mockZones,
+        zones: mockZones, 
+        user_location: { name: `Location ${lat.toFixed(4)}, ${lon.toFixed(4)}` } 
+      });
     } finally {
       setLoading(false);
     }
