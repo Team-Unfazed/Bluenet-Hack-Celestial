@@ -23,12 +23,9 @@ import { t } from '../../utils/translations';
 
 const MaritimeSafety = () => {
   const [location, setLocation] = useState(null);
-  const [nearbyVessels, setNearbyVessels] = useState([]);
   const [dangerAnalysis, setDangerAnalysis] = useState(null);
-  const [safetyReport, setSafetyReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [notifications, setNotifications] = useState([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const intervalRef = useRef(null);
   const mapRef = useRef(null);
@@ -36,12 +33,10 @@ const MaritimeSafety = () => {
   useEffect(() => {
     getCurrentLocation();
     
-    // Set up auto-refresh every 30 seconds for real-time monitoring
+    // Set up auto-refresh every 30 seconds for real-time location monitoring
     if (autoRefresh) {
       intervalRef.current = setInterval(() => {
-        if (location) {
-          fetchSafetyData(location.lat, location.lon, false);
-        }
+        getCurrentLocation();
       }, 30000);
     }
     
@@ -50,7 +45,7 @@ const MaritimeSafety = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [location, autoRefresh]);
+  }, [autoRefresh]);
 
   const getCurrentLocation = () => {
     setLoading(true);
@@ -62,49 +57,54 @@ const MaritimeSafety = () => {
             lon: position.coords.longitude
           };
           setLocation(loc);
-          fetchSafetyData(loc.lat, loc.lon, true);
-          initializeMap(loc.lat, loc.lon);
+          fetchEnvironmentalData(loc.lat, loc.lon, true);
+          initializeInteractiveMap(loc.lat, loc.lon);
         },
         (error) => {
           console.error('Error getting location:', error);
           // Fallback to Mumbai coordinates for demo
           const loc = { lat: 19.0760, lon: 72.8777 };
           setLocation(loc);
-          fetchSafetyData(loc.lat, loc.lon, true);
-          initializeMap(loc.lat, loc.lon);
+          fetchEnvironmentalData(loc.lat, loc.lon, true);
+          initializeInteractiveMap(loc.lat, loc.lon);
         }
       );
     } else {
       // Fallback for browsers without geolocation
       const loc = { lat: 19.0760, lon: 72.8777 };
       setLocation(loc);
-      fetchSafetyData(loc.lat, loc.lon, true);
-      initializeMap(loc.lat, loc.lon);
+      fetchEnvironmentalData(loc.lat, loc.lon, true);
+      initializeInteractiveMap(loc.lat, loc.lon);
     }
   };
 
-  const initializeMap = (lat, lon) => {
-    // Initialize VesselFinder map with user's location and fleet tracking
+  const initializeInteractiveMap = (lat, lon) => {
+    // Initialize VesselFinder interactive map with ONLY user's location
     if (mapRef.current) {
       // Clear existing map
       mapRef.current.innerHTML = '';
       
-      // Create script elements for the VesselFinder map with vessel tracking
+      // Create script elements for the VesselFinder interactive map
       const configScript = document.createElement('script');
       configScript.type = 'text/javascript';
       configScript.innerHTML = `
+        // Map appearance
         var width="100%";
         var height="300";
         var latitude="${lat.toFixed(6)}";
         var longitude="${lon.toFixed(6)}";
         var zoom="12";
         var names=false;
+
+        // Single ship tracking - DISABLED (no specific vessel tracking)
         var mmsi="";
         var imo="";
         var show_track=false;
-        var fleet="e48ab3d80a0e2a9bf28930f2dd08800c";
+
+        // Fleet tracking - DISABLED (only show user location)
+        var fleet="";
         var fleet_name="";
-        var fleet_timespan="1440";
+        var fleet_timespan="0";
       `;
       
       const mapScript = document.createElement('script');
@@ -113,147 +113,40 @@ const MaritimeSafety = () => {
       
       mapRef.current.appendChild(configScript);
       mapRef.current.appendChild(mapScript);
+      
+      console.log(`🗺️ Interactive map initialized for location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
     }
   };
 
-  const fetchSafetyData = async (lat, lon, showLoading = true) => {
+  const fetchEnvironmentalData = async (lat, lon, showLoading = true) => {
     if (showLoading) setLoading(true);
     
     try {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
       
-      // Fetch complete safety report with vessel tracking
+      // Fetch environmental danger analysis only
       const response = await fetch(
-        `${backendUrl}/api/maritime/complete-safety-report?lat=${lat}&lon=${lon}&radius=10`
+        `${backendUrl}/api/maritime/danger-analysis?lat=${lat}&lon=${lon}`
       );
       
       if (response.ok) {
         const data = await response.json();
-        const reportData = data.data;
-        
-        setSafetyReport(reportData);
-        setNearbyVessels(reportData.vessel_tracking.vessels || []);
-        setDangerAnalysis(reportData.environmental_conditions);
+        setDangerAnalysis(data.data);
         setLastUpdate(new Date());
         
-        // Check for new alerts
-        checkForAlerts(reportData);
-        
       } else {
-        console.error('Failed to fetch safety data');
-        // Fallback data
+        console.error('Failed to fetch environmental data');
+        // Fallback environmental data
         setDangerAnalysis(generateMockEnvironmentalData());
-        setNearbyVessels(generateMockVessels(lat, lon));
         setLastUpdate(new Date());
       }
     } catch (error) {
-      console.error('Error fetching safety data:', error);
-      // Fallback data
+      console.error('Error fetching environmental data:', error);
+      // Fallback environmental data
       setDangerAnalysis(generateMockEnvironmentalData());
-      setNearbyVessels(generateMockVessels(lat, lon));
       setLastUpdate(new Date());
     } finally {
       if (showLoading) setLoading(false);
-    }
-  };
-
-  const generateMockVessels = (lat, lon) => {
-    return [
-      {
-        mmsi: "DEMO001",
-        ship_name: "Fishing Vessel Alpha",
-        ship_type: "Fishing",
-        latitude: lat + 0.01,
-        longitude: lon + 0.01,
-        distance_km: 1.2,
-        speed: 8.5,
-        course: 145,
-        alert_level: {
-          level: "WARNING",
-          icon: "⚠️",
-          message: "Ship nearby - Monitor closely",
-          color: "orange",
-          action: "Maintain safe distance"
-        }
-      },
-      {
-        mmsi: "DEMO002", 
-        ship_name: "Cargo Vessel Beta",
-        ship_type: "Cargo",
-        latitude: lat - 0.02,
-        longitude: lon - 0.01,
-        distance_km: 2.8,
-        speed: 12.3,
-        course: 280,
-        alert_level: {
-          level: "SAFE",
-          icon: "✅",
-          message: "Safe distance",
-          color: "green",
-          action: "Continue normal operation"
-        }
-      }
-    ];
-  };
-
-  const checkForAlerts = (reportData) => {
-    const newNotifications = [];
-    
-    // Check vessel collision alerts
-    const dangerVessels = reportData.vessel_tracking.vessels.filter(
-      v => v.alert_level.level === 'DANGER'
-    );
-    const warningVessels = reportData.vessel_tracking.vessels.filter(
-      v => v.alert_level.level === 'WARNING'
-    );
-    
-    if (dangerVessels.length > 0) {
-      newNotifications.push({
-        id: Date.now() + Math.random(),
-        type: 'DANGER',
-        title: '🚨 COLLISION RISK',
-        message: `${dangerVessels.length} vessel(s) within 2km - Take immediate action!`,
-        timestamp: new Date(),
-        urgent: true
-      });
-      
-      // Browser notification for critical alerts
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('🚨 COLLISION RISK - BlueNet Maritime Safety', {
-          body: `${dangerVessels.length} vessel(s) very close - Take evasive action!`,
-          icon: '/favicon.ico',
-          requireInteraction: true
-        });
-      }
-    }
-    
-    if (warningVessels.length > 0) {
-      newNotifications.push({
-        id: Date.now() + Math.random() + 1,
-        type: 'WARNING',
-        title: '⚠️ Vessels Nearby',
-        message: `${warningVessels.length} vessel(s) within 5km - Monitor closely`,
-        timestamp: new Date(),
-        urgent: false
-      });
-    }
-    
-    // Check environmental dangers
-    const envRisk = reportData.environmental_conditions?.risk_analysis?.overall_risk_level;
-    if (envRisk === 'DANGER' || envRisk === 'EXTREME_DANGER') {
-      newNotifications.push({
-        id: Date.now() + Math.random() + 2,
-        type: 'DANGER',
-        title: '🌊 Dangerous Conditions',
-        message: reportData.environmental_conditions.risk_analysis.risk_message,
-        timestamp: new Date(),
-        urgent: true
-      });
-    }
-    
-    // Add new notifications
-    if (newNotifications.length > 0) {
-      setNotifications(prev => [...newNotifications, ...prev.slice(0, 4)]);
     }
   };
 
@@ -287,77 +180,21 @@ const MaritimeSafety = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'CRITICAL': return 'border-red-500 bg-red-50';
-      case 'WARNING': return 'border-orange-500 bg-orange-50';
+      case 'EXTREME_DANGER':
+      case 'DANGER': return 'border-red-500 bg-red-50';
+      case 'CAUTION': return 'border-orange-500 bg-orange-50';
       case 'SAFE': return 'border-green-500 bg-green-50';
       default: return 'border-gray-300 bg-gray-50';
     }
   };
 
-  const clearNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const requestNotificationPermission = () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  };
-
   return (
     <div className="space-y-4 p-4 max-w-full">
-      {/* Request notification permission */}
-      {'Notification' in window && Notification.permission === 'default' && (
-        <Alert className="border-blue-200 bg-blue-50">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Enable notifications for real-time collision alerts?
-            <Button onClick={requestNotificationPermission} className="ml-2" size="sm">
-              Enable Alerts
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Active Notifications */}
-      {notifications.length > 0 && (
-        <div className="space-y-2">
-          {notifications.slice(0, 3).map((notification) => (
-            <Alert 
-              key={notification.id} 
-              className={`${notification.type === 'DANGER' ? 'border-red-500 bg-red-50' : 'border-orange-500 bg-orange-50'} animate-pulse`}
-            >
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <strong>{notification.title}</strong>
-                    <br />
-                    {notification.message}
-                    <div className="text-xs text-gray-500 mt-1">
-                      {notification.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => clearNotification(notification.id)}
-                    variant="ghost" 
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                  >
-                    ×
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          ))}
-        </div>
-      )}
-
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">🚨 Maritime Safety</h2>
-          <p className="text-sm text-gray-600">Real-time collision avoidance & danger detection</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">🧭 Live Location Tracker</h2>
+          <p className="text-sm text-gray-600">Your live location tracking & environmental conditions</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button 
@@ -381,18 +218,18 @@ const MaritimeSafety = () => {
         </div>
       </div>
 
-      {/* Current Location */}
+      {/* Current Location Status */}
       {location && (
         <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-lg text-blue-800">📍 Your Current Location</h3>
+                <h3 className="font-bold text-lg text-blue-800">📍 Your Live Location</h3>
                 <p className="text-sm text-blue-600">
                   Latitude: {location.lat.toFixed(6)}° | Longitude: {location.lon.toFixed(6)}°
                 </p>
                 <p className="text-xs text-blue-500">
-                  Last updated: {lastUpdate?.toLocaleTimeString()}
+                  Last updated: {lastUpdate?.toLocaleTimeString()} | Auto-refresh: {autoRefresh ? 'Every 30s' : 'Off'}
                 </p>
               </div>
               <MapPin className="w-8 h-8 text-blue-600" />
@@ -401,78 +238,59 @@ const MaritimeSafety = () => {
         </Card>
       )}
 
-      {/* Overall Safety Status */}
-      {safetyReport && (
-        <Card className={`${getStatusColor(safetyReport.overall_safety?.status)} border-2`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-lg">{safetyReport.overall_safety?.message || "Monitoring conditions..."}</h3>
-                <p className="text-sm">
-                  {nearbyVessels.length} vessels detected nearby
-                </p>
-              </div>
-              <Shield className={`w-8 h-8 ${
-                safetyReport.overall_safety?.status === 'CRITICAL' ? 'text-red-600' :
-                safetyReport.overall_safety?.status === 'WARNING' ? 'text-orange-600' :
-                'text-green-600'
-              }`} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mobile-Optimized Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        
-        {/* Vessel Tracking */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-base">
-              <Navigation className="w-5 h-5 mr-2 text-blue-600" />
-              Vessel Tracking
-            </CardTitle>
-            <CardDescription>
-              {nearbyVessels.length} vessels within 10km radius
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {nearbyVessels.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">No vessels detected nearby</p>
-            ) : (
-              nearbyVessels.slice(0, 5).map((vessel, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant={vessel.alert_level.level === 'DANGER' ? 'destructive' : 
-                               vessel.alert_level.level === 'WARNING' ? 'secondary' : 'default'}
-                        className="text-xs"
-                      >
-                        {vessel.alert_level.icon} {vessel.alert_level.level}
-                      </Badge>
-                      <span className="font-medium text-sm">{vessel.ship_name}</span>
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      {vessel.ship_type} • {vessel.distance_km}km away
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Speed: {vessel.speed} knots • Course: {vessel.course}°
-                    </div>
-                    {vessel.alert_level.level !== 'SAFE' && (
-                      <div className="text-xs font-medium mt-1" style={{color: vessel.alert_level.color}}>
-                        {vessel.alert_level.action}
-                      </div>
-                    )}
-                  </div>
+      {/* Interactive VesselFinder Map - Live Location Only */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-base">
+            <Navigation className="w-5 h-5 mr-2 text-blue-600" />
+            Interactive Live Location Map
+          </CardTitle>
+          <CardDescription>
+            Your current position on interactive map - Live tracking enabled
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div 
+            ref={mapRef}
+            className="h-64 sm:h-80 rounded-lg overflow-hidden bg-blue-50 border border-blue-200"
+            style={{ minHeight: '300px' }}
+          >
+            {/* VesselFinder interactive map will be injected here */}
+            {!location && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Crosshair className="w-12 h-12 mx-auto text-blue-400 animate-pulse" />
+                  <p className="text-blue-600 mt-2">Getting your location...</p>
                 </div>
-              ))
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Environmental Conditions */}
-        {dangerAnalysis && (
+      {/* Environmental Conditions */}
+      {dangerAnalysis && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Overall Status */}
+          <Card className={`${getStatusColor(dangerAnalysis.risk_analysis.overall_risk_level)} border-2`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg">{dangerAnalysis.risk_analysis.risk_message}</h3>
+                  <p className="text-sm">
+                    Risk Level: {dangerAnalysis.risk_analysis.overall_risk_level}
+                  </p>
+                </div>
+                <Shield className={`w-8 h-8 ${
+                  dangerAnalysis.risk_analysis.overall_risk_level.includes('DANGER') ? 'text-red-600' :
+                  dangerAnalysis.risk_analysis.overall_risk_level === 'CAUTION' ? 'text-orange-600' :
+                  'text-green-600'
+                }`} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Environmental Data */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-base">
@@ -480,26 +298,10 @@ const MaritimeSafety = () => {
                 Environmental Conditions
               </CardTitle>
               <CardDescription>
-                ML-powered danger analysis
+                Real-time environmental analysis at your location
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Risk Level */}
-              <div className="flex items-center justify-between p-3 rounded-lg border">
-                <div>
-                  <div className="font-medium">Overall Risk</div>
-                  <div className="text-sm text-gray-600">
-                    {dangerAnalysis.risk_analysis.risk_message}
-                  </div>
-                </div>
-                <Badge 
-                  variant={dangerAnalysis.risk_analysis.overall_risk_level.includes('DANGER') ? 'destructive' : 
-                         dangerAnalysis.risk_analysis.overall_risk_level === 'CAUTION' ? 'secondary' : 'default'}
-                >
-                  {dangerAnalysis.risk_analysis.overall_risk_level}
-                </Badge>
-              </div>
-
               {/* Environmental Data Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
@@ -558,27 +360,33 @@ const MaritimeSafety = () => {
               )}
             </CardContent>
           </Card>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* VesselFinder Map with Fleet Tracking */}
+      {/* Location History */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center text-base">
-            <Navigation className="w-5 h-5 mr-2 text-blue-600" />
-            Live Maritime Map
+            <Clock className="w-5 h-5 mr-2 text-blue-600" />
+            Location Tracking Status
           </CardTitle>
-          <CardDescription>
-            Your location and nearby vessels with collision detection
-          </CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
-          <div 
-            ref={mapRef}
-            className="h-64 sm:h-80 rounded-lg overflow-hidden"
-            style={{ minHeight: '300px' }}
-          >
-            {/* VesselFinder map with fleet tracking will be injected here */}
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Live Tracking: 
+                <Badge variant={autoRefresh ? "default" : "secondary"} className="ml-2">
+                  {autoRefresh ? "Active" : "Paused"}
+                </Badge>
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                GPS accuracy: High | Update frequency: 30 seconds
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Last sync:</p>
+              <p className="font-medium">{lastUpdate?.toLocaleTimeString()}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
