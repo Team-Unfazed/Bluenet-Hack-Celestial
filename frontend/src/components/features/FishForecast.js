@@ -59,64 +59,161 @@ const FishForecast = () => {
   };
 
   const generateMockFishingZones = (lat, lon) => {
-    // Generate realistic fishing zones around the given location
-    const zones = [];
-    const numZones = 8 + Math.floor(Math.random() * 7); // 8-15 zones
-    
-    for (let i = 0; i < numZones; i++) {
-      // Create zones within 20km radius
-      const distance = 2 + Math.random() * 18; // 2-20 km from center
-      const angle = (i / numZones) * 2 * Math.PI + Math.random() * 0.5; // Spread around
-      
-      const zoneLat = lat + (distance / 111) * Math.cos(angle);
-      const zoneLon = lon + (distance / (111 * Math.cos(lat * Math.PI / 180))) * Math.sin(angle);
-      
-      // Generate realistic environmental scores
-      const sst = 0.3 + Math.random() * 0.5; // Sea surface temperature suitability
-      const chlorophyll = 0.2 + Math.random() * 0.6; // Chlorophyll concentration
-      const wind = 0.4 + Math.random() * 0.4; // Wind conditions (0.4-0.8 good for fishing)
-      const current = 0.3 + Math.random() * 0.5; // Ocean current strength
-      
-      // Combined score with some randomness
-      const combinedScore = (sst * 0.3 + chlorophyll * 0.3 + wind * 0.25 + current * 0.15) + (Math.random() - 0.5) * 0.2;
-      const finalScore = Math.max(0.1, Math.min(0.95, combinedScore));
-      
-      // Determine zone quality
-      let quality = 'fair';
-      let color = '#ef4444'; // red
-      if (finalScore >= 0.8) {
-        quality = 'excellent';
-        color = '#22c55e'; // green
-      } else if (finalScore >= 0.6) {
-        quality = 'good';
-        color = '#eab308'; // yellow
-      }
-      
-      zones.push({
-        lat: zoneLat,
-        lon: zoneLon,
-        score: finalScore,
-        sst: sst,
-        chlorophyll: chlorophyll,
-        wind: wind,
-        current: current,
-        quality: quality,
-        color: color,
-        location_name: `Zone ${i + 1}`,
-        distance_from_user: distance,
-        depth: 15 + Math.random() * 85, // 15-100m depth
+    // Always return the same consistent fishing zones as shown in the provided image
+    const consistentZones = [
+      // Green zones (Excellent) - West and Northwest 
+      {
+        lat: lat - 0.025,
+        lon: lon - 0.035,
+        score: 0.92,
+        sst: 0.88,
+        chlorophyll: 0.95,
+        wind: 0.85,
+        current: 0.89,
+        quality: 'excellent',
+        color: '#22c55e',
+        location_name: 'Zone A - Excellent',
+        distance_from_user: 4.2,
+        depth: 35,
         fish_probability: {
-          pomfret: Math.random() * 0.8 + 0.1,
-          mackerel: Math.random() * 0.9 + 0.1,
-          sardine: Math.random() * 0.7 + 0.2,
-          tuna: Math.random() * 0.6 + 0.1,
-          kingfish: Math.random() * 0.5 + 0.1
+          pomfret: 0.89,
+          mackerel: 0.94,
+          sardine: 0.78,
+          tuna: 0.67,
+          kingfish: 0.72
         }
-      });
-    }
-    
-    // Sort by score (best first)
-    return zones.sort((a, b) => b.score - a.score);
+      },
+      {
+        lat: lat - 0.065,
+        lon: lon - 0.025,
+        score: 0.87,
+        sst: 0.84,
+        chlorophyll: 0.91,
+        wind: 0.82,
+        current: 0.86,
+        quality: 'excellent',
+        color: '#22c55e',
+        location_name: 'Zone B - Excellent',
+        distance_from_user: 7.8,
+        depth: 28,
+        fish_probability: {
+          pomfret: 0.85,
+          mackerel: 0.91,
+          sardine: 0.74,
+          tuna: 0.63,
+          kingfish: 0.68
+        }
+      },
+      {
+        lat: lat - 0.045,
+        lon: lon - 0.055,
+        score: 0.84,
+        sst: 0.81,
+        chlorophyll: 0.88,
+        wind: 0.79,
+        current: 0.83,
+        quality: 'excellent',
+        color: '#22c55e',
+        location_name: 'Zone C - Excellent', 
+        distance_from_user: 6.1,
+        depth: 42,
+        fish_probability: {
+          pomfret: 0.82,
+          mackerel: 0.88,
+          sardine: 0.71,
+          tuna: 0.60,
+          kingfish: 0.65
+        }
+      },
+      // Yellow zones (Good) - North and East
+      {
+        lat: lat + 0.035,
+        lon: lon - 0.015,
+        score: 0.72,
+        sst: 0.71,
+        chlorophyll: 0.75,
+        wind: 0.68,
+        current: 0.73,
+        quality: 'good',
+        color: '#eab308',
+        location_name: 'Zone D - Good',
+        distance_from_user: 3.9,
+        depth: 52,
+        fish_probability: {
+          pomfret: 0.70,
+          mackerel: 0.75,
+          sardine: 0.62,
+          tuna: 0.48,
+          kingfish: 0.55
+        }
+      },
+      {
+        lat: lat + 0.055,
+        lon: lon + 0.025,
+        score: 0.68,
+        sst: 0.67,
+        chlorophyll: 0.71,
+        wind: 0.65,
+        current: 0.69,
+        quality: 'good',
+        color: '#eab308',
+        location_name: 'Zone E - Good',
+        distance_from_user: 6.7,
+        depth: 38,
+        fish_probability: {
+          pomfret: 0.66,
+          mackerel: 0.71,
+          sardine: 0.58,
+          tuna: 0.44,
+          kingfish: 0.51
+        }
+      },
+      // Red zones (Poor) - Southeast
+      {
+        lat: lat + 0.025,
+        lon: lon + 0.045,
+        score: 0.38,
+        sst: 0.42,
+        chlorophyll: 0.35,
+        wind: 0.41,
+        current: 0.36,
+        quality: 'poor',
+        color: '#ef4444',
+        location_name: 'Zone F - Poor',
+        distance_from_user: 5.3,
+        depth: 65,
+        fish_probability: {
+          pomfret: 0.35,
+          mackerel: 0.40,
+          sardine: 0.32,
+          tuna: 0.25,
+          kingfish: 0.28
+        }
+      },
+      {
+        lat: lat + 0.015,
+        lon: lon + 0.065,
+        score: 0.34,
+        sst: 0.38,
+        chlorophyll: 0.31,
+        wind: 0.37,
+        current: 0.32,
+        quality: 'poor',
+        color: '#ef4444',
+        location_name: 'Zone G - Poor',
+        distance_from_user: 7.2,
+        depth: 58,
+        fish_probability: {
+          pomfret: 0.31,
+          mackerel: 0.36,
+          sardine: 0.28,
+          tuna: 0.21,
+          kingfish: 0.24
+        }
+      }
+    ];
+
+    return consistentZones;
   };
 
   const fetchFishingZones = async (lat, lon) => {
