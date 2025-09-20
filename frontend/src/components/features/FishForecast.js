@@ -59,13 +59,13 @@ const FishForecast = () => {
   };
 
   const generateMockFishingZones = (lat, lon) => {
-    // Always return the same consistent fishing zones as shown in the provided image
-    const consistentZones = [
-      // Green zones (Excellent) - West and Northwest 
+    // FIXED ZONES - Always return the exact same pattern, no randomness
+    const fixedZones = [
+      // Green zones (Excellent) - West and Northwest - FIXED POSITIONS
       {
-        lat: lat - 0.025,
+        lat: lat - 0.025, // Always same offset
         lon: lon - 0.035,
-        score: 0.92,
+        score: 0.92, // Fixed score
         sst: 0.88,
         chlorophyll: 0.95,
         wind: 0.85,
@@ -73,10 +73,10 @@ const FishForecast = () => {
         quality: 'excellent',
         color: '#22c55e',
         location_name: 'Zone A - Excellent',
-        distance_from_user: 4.2,
-        depth: 35,
+        distance_from_user: 4.2, // Fixed distance
+        depth: 35, // Fixed depth
         fish_probability: {
-          pomfret: 0.89,
+          pomfret: 0.89, // Fixed probabilities
           mackerel: 0.94,
           sardine: 0.78,
           tuna: 0.67,
@@ -125,7 +125,7 @@ const FishForecast = () => {
           kingfish: 0.65
         }
       },
-      // Yellow zones (Good) - North and East
+      // Yellow zones (Good) - North and East - FIXED POSITIONS  
       {
         lat: lat + 0.035,
         lon: lon - 0.015,
@@ -168,7 +168,7 @@ const FishForecast = () => {
           kingfish: 0.51
         }
       },
-      // Red zones (Poor) - Southeast
+      // Red zones (Poor) - Southeast - FIXED POSITIONS
       {
         lat: lat + 0.025,
         lon: lon + 0.045,
@@ -213,7 +213,9 @@ const FishForecast = () => {
       }
     ];
 
-    return consistentZones;
+    // Always return the exact same zones - NO RANDOMNESS, NO SORTING CHANGES
+    console.log('🎯 FIXED ZONES: Returning identical pattern every time');
+    return fixedZones; // Return as-is, same order every time
   };
 
   const fetchFishingZones = async (lat, lon) => {
