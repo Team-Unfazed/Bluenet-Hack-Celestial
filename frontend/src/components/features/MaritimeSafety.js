@@ -81,13 +81,57 @@ const MaritimeSafety = () => {
   const initializeInteractiveMap = (lat, lon) => {
     // Initialize VesselFinder interactive map with ONLY user's location
     if (mapRef.current) {
-      // Clear existing map
+      // Clear existing content
       mapRef.current.innerHTML = '';
       
-      // Create script elements for the VesselFinder interactive map
-      const configScript = document.createElement('script');
-      configScript.type = 'text/javascript';
-      configScript.innerHTML = `
+      // Create a container div for the map
+      const mapContainer = document.createElement('div');
+      mapContainer.id = `vesselfinder-map-${Date.now()}`;
+      mapContainer.style.width = '100%';
+      mapContainer.style.height = '300px';
+      
+      // Add the container to the ref
+      mapRef.current.appendChild(mapContainer);
+      
+      // Add VesselFinder configuration as global variables
+      window.vesselfinderConfig = {
+        width: "100%",
+        height: "300",
+        latitude: lat.toFixed(6),
+        longitude: lon.toFixed(6),
+        zoom: "12",
+        names: false,
+        mmsi: "",
+        imo: "",
+        show_track: false,
+        fleet: "", // Empty fleet - no vessel tracking
+        fleet_name: "",
+        fleet_timespan: "0"
+      };
+      
+      // Create and load the VesselFinder script
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.onload = () => {
+        console.log(`🗺️ Interactive map loaded for location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+      };
+      script.onerror = () => {
+        console.error('Failed to load VesselFinder map');
+        // Show fallback message
+        mapContainer.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: center; height: 300px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
+            <div style="text-align: center; color: #0369a1;">
+              <div style="font-size: 24px; margin-bottom: 8px;">🗺️</div>
+              <div style="font-weight: bold;">Interactive Map</div>
+              <div style="font-size: 14px; margin-top: 4px;">Location: ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E</div>
+              <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Live tracking enabled</div>
+            </div>
+          </div>
+        `;
+      };
+      
+      // Set up the configuration script content
+      script.innerHTML = `
         // Map appearance
         var width="100%";
         var height="300";
@@ -96,7 +140,7 @@ const MaritimeSafety = () => {
         var zoom="12";
         var names=false;
 
-        // Single ship tracking - DISABLED (no specific vessel tracking)
+        // Single ship tracking - DISABLED
         var mmsi="";
         var imo="";
         var show_track=false;
@@ -107,14 +151,22 @@ const MaritimeSafety = () => {
         var fleet_timespan="0";
       `;
       
-      const mapScript = document.createElement('script');
-      mapScript.type = 'text/javascript';
-      mapScript.src = 'https://www.vesselfinder.com/aismap.js';
+      // Append to head to avoid React DOM conflicts
+      document.head.appendChild(script);
       
-      mapRef.current.appendChild(configScript);
-      mapRef.current.appendChild(mapScript);
-      
-      console.log(`🗺️ Interactive map initialized for location: ${lat.toFixed(6)}, ${lon.toFixed(6)}`);
+      // Load the VesselFinder script after configuration
+      setTimeout(() => {
+        const mapScript = document.createElement('script');
+        mapScript.type = 'text/javascript';
+        mapScript.src = 'https://www.vesselfinder.com/aismap.js';
+        mapScript.onload = () => {
+          console.log('VesselFinder script loaded successfully');
+        };
+        mapScript.onerror = () => {
+          console.error('Failed to load VesselFinder script');
+        };
+        document.head.appendChild(mapScript);
+      }, 100);
     }
   };
 
