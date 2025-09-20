@@ -46,12 +46,12 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Configure Gemini API
-GEMINI_API_KEY = "AIzaSyCtj7_BVpP20bHmFZMRaiWJLoPbPYvaEfg"  # Your provided API key
+GEMINI_API_KEY = os.getenv("gemini_api")  # Your provided API key
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Hugging Face configuration
-HF_API_TOKEN = "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"
+HF_API_TOKEN = os.getenv("Hugging-face")
 HF_MODELS = {
     "sst": "pranay096/my_big_model",
     "chlorophyll": "pranay096/Chlorophyll", 
@@ -60,7 +60,7 @@ HF_MODELS = {
 }
 
 # Weather API configuration
-WEATHER_API_KEY = "050d619e55cf67745176da03918ce218"
+WEATHER_API_KEY = os.getenv("Weather_api")
 
 # Global variables for caching
 rag_system = None
