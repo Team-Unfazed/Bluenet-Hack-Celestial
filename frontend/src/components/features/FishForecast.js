@@ -225,7 +225,7 @@ const FishForecast = () => {
       const mockZones = generateMockFishingZones(lat, lon);
       
       const processedData = {
-        zones: mockZones.map(zone => ({
+        best_zones: mockZones.map(zone => ({
           ...zone,
           // Ensure compatibility with existing map component
           latitude: zone.lat,
@@ -238,6 +238,7 @@ const FishForecast = () => {
             chlorophyll_mg_m3: zone.chlorophyll * 2 // Convert to realistic chlorophyll
           }
         })),
+        zones: mockZones, // Keep zones for compatibility
         user_location: { 
           name: `Live Location (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`,
           lat: lat,
